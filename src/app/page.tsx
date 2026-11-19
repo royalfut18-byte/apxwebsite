@@ -13,7 +13,7 @@ export default function Home() {
       <main id="main">
         <Hero />
         {/* Everything after the hero rides up over it. */}
-        <div className="relative z-10 -mt-[100svh] rounded-t-[2rem] bg-ink">
+        <div className="hero-follow relative z-10 rounded-t-[2rem] bg-ink">
           <Ticker />
           <Services />
           <Work />

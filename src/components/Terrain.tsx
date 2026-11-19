@@ -415,6 +415,15 @@ const BG = hexToRgb("#070708");
 const LINE = hexToRgb("#f1eee7");
 const EMBER = hexToRgb("#ff5b2e");
 const SIZE = 5.2;
+/** The hero summit never sits closer than this to the top of the canvas, in CSS pixels. */
+const SUMMIT_CLEARANCE = 156;
+
+// Adaptive resolution (see `measure` below).
+const TUNE_WARMUP_MS = 2500; // let the page's own entrance animations finish first
+const TUNE_WINDOW = 45; // frames averaged per reading
+const TUNE_SLOW_MS = 24; // slower than about 42 frames a second
+const TUNE_STEP = 0.8; // each step renders 80% of the previous width and height
+const TUNE_FLOOR = 0.5;
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type);
@@ -569,6 +578,61 @@ function createScene(
     lost: false,
   };
 
+  // Adaptive resolution. If frames keep arriving late, the canvas is rendered a step smaller
+  // and stretched back up by CSS, which is what a struggling GPU needs. If two steps in a
+  // row change nothing, the hold-up is elsewhere (a 30 Hz display, a battery saver capping
+  // the frame rate), so the detail is put back and the scene is left alone from then on.
+  const tune = {
+    quality: 1, // multiplier on the canvas resolution
+    good: 1, // the last quality that was shown to help (or the starting one)
+    since: 0, // when the first frame was drawn
+    frames: 0,
+    total: 0,
+    before: 0, // average frame time ahead of the latest step down
+    misses: 0, // consecutive steps that made no difference
+    skip: false, // ignore the next frame (it follows a pause)
+    settled: reduced,
+  };
+
+  function measure(now: number, frameMs: number) {
+    if (tune.settled) return;
+    if (!tune.since) tune.since = now;
+    if (tune.skip || frameMs <= 0) {
+      tune.skip = false;
+      return;
+    }
+    if (now - tune.since < TUNE_WARMUP_MS) return;
+
+    tune.frames++;
+    tune.total += Math.min(frameMs, 500);
+    if (tune.frames < TUNE_WINDOW) return;
+
+    const average = tune.total / tune.frames;
+    tune.frames = 0;
+    tune.total = 0;
+
+    if (tune.before > 0) {
+      if (average > tune.before * 0.88) {
+        tune.misses++;
+      } else {
+        tune.misses = 0;
+        tune.good = tune.quality;
+      }
+    }
+
+    if (tune.misses >= 2) {
+      tune.quality = tune.good;
+      tune.settled = true;
+      resize();
+    } else if (average > TUNE_SLOW_MS && tune.quality > TUNE_FLOOR) {
+      tune.before = average;
+      tune.quality = Math.max(TUNE_FLOOR, tune.quality * TUNE_STEP);
+      resize();
+    } else {
+      tune.settled = true;
+    }
+  }
+
   function resize() {
     const rect = canvas.getBoundingClientRect();
     const cssW = Math.max(1, rect.width);
@@ -577,7 +641,7 @@ function createScene(
     const budget = 2_400_000;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     if (cssW * cssH * dpr * dpr > budget) dpr = Math.sqrt(budget / (cssW * cssH));
-    dpr = Math.max(0.75, dpr);
+    dpr = Math.max(0.5, Math.max(0.75, dpr) * tune.quality);
     state.dpr = dpr;
     state.width = Math.round(cssW * dpr);
     state.height = Math.round(cssH * dpr);
@@ -589,9 +653,11 @@ function createScene(
 
   function draw(now: number) {
     if (state.lost) return;
-    const dt = state.last ? Math.min((now - state.last) / 1000, 0.05) : 0.016;
+    const frameMs = state.last ? now - state.last : 0;
+    const dt = frameMs ? Math.min(frameMs / 1000, 0.05) : 0.016;
     state.last = now;
     if (!reduced) state.time += dt;
+    measure(now, frameMs);
 
     const ease = 1 - Math.exp(-dt * 3.2);
     state.px += (state.tx - state.px) * ease;
@@ -638,17 +704,27 @@ function createScene(
     lookAt(viewM, eye, target, up);
     multiply(viewProj, proj, viewM);
 
-    // Tell whoever is listening where the summit is on screen.
+    // Where the summit lands on screen, before the screen-space shift is applied.
+    const m = viewProj;
+    const cw = m[3] * peak[0] + m[7] * peak[1] + m[11] * peak[2] + m[15];
+    const sx = cw > 0 ? (m[0] * peak[0] + m[4] * peak[1] + m[8] * peak[2] + m[12]) / cw : 0;
+    const sy = cw > 0 ? (m[1] * peak[0] + m[5] * peak[1] + m[9] * peak[2] + m[13]) / cw : 0;
+    const cssWidth = state.width / state.dpr;
+    const cssHeight = state.height / state.dpr;
+
+    // On short screens the summit would poke up behind the header. Slide the whole scene
+    // down just far enough to keep it, and its label, clear. Relaxes as the camera lifts.
+    // (Phones are left alone: there the mountain is a backdrop and carries no label.)
+    if (v === "peak" && cssWidth >= 768) {
+      const lowest = 1 - (2 * SUMMIT_CLEARANCE) / cssHeight - sy;
+      shiftY = Math.min(shiftY, mix(lowest, 0, p));
+    }
+
+    // Tell whoever is listening where the summit is.
     const pin = live.current.summit;
-    if (pin) {
-      const m = viewProj;
-      const cw = m[3] * peak[0] + m[7] * peak[1] + m[11] * peak[2] + m[15];
-      if (cw > 0) {
-        const nx = (m[0] * peak[0] + m[4] * peak[1] + m[8] * peak[2] + m[12]) / cw + shiftX;
-        const ny = (m[1] * peak[0] + m[5] * peak[1] + m[9] * peak[2] + m[13]) / cw + shiftY;
-        pin.x.set(((nx + 1) / 2) * (state.width / state.dpr));
-        pin.y.set(((1 - ny) / 2) * (state.height / state.dpr));
-      }
+    if (pin && cw > 0) {
+      pin.x.set(((sx + shiftX + 1) / 2) * cssWidth);
+      pin.y.set(((1 - (sy + shiftY)) / 2) * cssHeight);
     }
 
     gl!.viewport(0, 0, state.width, state.height);
@@ -729,7 +805,10 @@ function createScene(
   );
   io.observe(canvas);
 
-  const onVisibility = () => kick();
+  const onVisibility = () => {
+    tune.skip = true;
+    kick();
+  };
   const onLost = (e: Event) => {
     e.preventDefault();
     state.lost = true;

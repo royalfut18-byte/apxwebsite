@@ -255,16 +255,16 @@ export function ContactForm() {
                 <div className="mt-7 flex flex-wrap items-center gap-3">
                   <a
                     href={mailtoFor(cleanEnquiry(enquiry))}
-                    className="inline-flex h-12 items-center rounded-full bg-bone px-6 text-[0.9375rem] font-semibold text-ink transition-colors duration-300 hover:bg-ember"
+                    className="inline-flex h-12 items-center whitespace-nowrap rounded-full bg-bone px-6 text-[0.9375rem] font-semibold text-ink transition-colors duration-300 hover:bg-ember"
                   >
                     Open it again
                   </a>
                   <button
                     type="button"
                     onClick={copyEmail}
-                    className="inline-flex h-12 items-center rounded-full border border-white/20 px-6 text-[0.9375rem] font-semibold text-bone transition-colors duration-300 hover:border-white/50"
+                    className="inline-flex h-12 items-center whitespace-nowrap rounded-full border border-white/20 px-6 text-[0.9375rem] font-semibold text-bone transition-colors duration-300 hover:border-white/50"
                   >
-                    {copied ? "Copied" : `Copy ${site.email}`}
+                    {copied ? "Copied" : "Copy our email address"}
                   </button>
                 </div>
               </>
@@ -405,7 +405,7 @@ export function ContactForm() {
                 <button
                   type="submit"
                   disabled={status === "sending"}
-                  className="group relative inline-flex h-16 items-center gap-5 overflow-hidden rounded-full bg-ember pl-9 pr-3 text-lg font-semibold text-ink disabled:cursor-wait"
+                  className="group relative inline-flex h-16 items-center gap-5 overflow-hidden whitespace-nowrap rounded-full bg-ember pl-9 pr-3 text-lg font-semibold text-ink disabled:cursor-wait"
                 >
                   <span className="absolute inset-0 origin-bottom scale-y-0 bg-bone transition-transform duration-500 ease-[var(--ease-expo)] group-hover:scale-y-100 group-focus-visible:scale-y-100" />
                   <span className="relative">{status === "sending" ? "Sending" : "Send it"}</span>

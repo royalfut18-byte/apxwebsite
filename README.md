@@ -6,6 +6,19 @@ One long page, built to show the kind of work APX does: a Framer Motion intro, a
 contour-line mountain behind the hero, animated demos of each service, and a portfolio of
 real, live client sites.
 
+## Before you launch
+
+The site is ready to deploy, but a few details were filled in as placeholders. They all
+live in `src/lib/site.ts`:
+
+- [ ] **`email`**: currently `hello@apx.com.au`. Every "email us" link and the contact form
+      send to this address, so it must be a real inbox.
+- [ ] **`phone`** and **`instagram`**: blank, which hides them. Add them if you want them shown.
+- [ ] **`location`** and **`timeZone`**: currently `Australia` and Sydney time (the live clock).
+- [ ] **`url`**: currently `https://apx.com.au`. Change it if the site will live elsewhere.
+- [ ] Optional: add a `RESEND_API_KEY` so enquiries arrive in your inbox directly
+      (see [Contact form](#contact-form)).
+
 ## Run it
 
 ```bash
@@ -16,7 +29,8 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. Other scripts: `npm run build`, `npm run start`, `npm run lint`.
+Then open http://localhost:3000. Other scripts: `npm run build`, `npm run start`,
+`npm run lint` and `npm run format`.
 
 Needs Node 20.9 or newer.
 
@@ -78,8 +92,9 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
   the header logo, which is how it flies into place. Repeat visits in the same tab get a
   shorter version.
 - `src/components/Terrain.tsx`: the mountain. Raw WebGL2, one mesh and one shader, no 3D
-  library. It pauses when off screen. If WebGL is unavailable the hero keeps its glow and
-  simply leaves the mountain out.
+  library. It pauses when off screen and lowers its own resolution on slow graphics
+  hardware. If WebGL is unavailable the hero keeps its glow and simply leaves the mountain
+  out.
 - `src/components/demos/`: the four small service animations.
 - `src/components/sections/`: one file per section of the page.
 

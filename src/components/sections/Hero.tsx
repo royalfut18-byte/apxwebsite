@@ -21,14 +21,27 @@ export function Hero() {
   const { ready } = useIntro();
   const track = useRef<HTMLElement>(null);
 
-  // The hero is pinned for one screen of scrolling while the page slides over it.
-  const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end end"] });
+  // The hero is pinned for one screen of scrolling while the page slides over it (see
+  // .hero-track in globals.css). On very short viewports it is not pinned at all.
+  //
+  // Either way `journey` runs 0..1 over the hero's time on screen. It is derived from one
+  // fixed scroll range: in the pinned layout the track is two screens tall, so the hero
+  // is fully covered at the halfway point; unpinned, it is covered when it has scrolled away.
+  const unpinned = useMediaQuery("(max-height: 600px)");
+  const pinnedRef = useRef(true);
+  useEffect(() => {
+    pinnedRef.current = !unpinned;
+  }, [unpinned]);
+  const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end start"] });
+  const journey = useTransform(scrollYProgress, (v) =>
+    Math.min(1, Math.max(0, v * (pinnedRef.current ? 2 : 1))),
+  );
 
-  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "-22%"]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const frameScale = useTransform(scrollYProgress, [0, 1], [1, 0.93]);
-  const frameRadius = useTransform(scrollYProgress, [0, 0.25], [0, 32]);
-  const glowOpacity = useTransform(scrollYProgress, [0, 0.9], [1, 0.25]);
+  const contentY = useTransform(journey, [0, 1], ["0%", "-22%"]);
+  const contentOpacity = useTransform(journey, [0, 0.5], [1, 0]);
+  const frameScale = useTransform(journey, [0, 1], [1, 0.93]);
+  const frameRadius = useTransform(journey, [0, 0.25], [0, 32]);
+  const glowOpacity = useTransform(journey, [0, 0.9], [1, 0.25]);
 
   // The mountain fades up once the curtain lifts, then dims as the camera climbs away.
   const dawn = useMotionValue(0);
@@ -42,24 +55,24 @@ export function Hero() {
     );
     return () => controls.stop();
   }, [ready, reduced, dawn]);
-  const intensity = useTransform([dawn, scrollYProgress], ([d, p]: number[]) => d * (1 - p * 0.72));
+  const intensity = useTransform([dawn, journey], ([d, p]: number[]) => d * (1 - p * 0.72));
 
   // Where the summit is on screen, reported by the 3D scene every frame.
   const summitX = useMotionValue(-999);
   const summitY = useMotionValue(-999);
   const summit = useMemo(() => ({ x: summitX, y: summitY }), [summitX, summitY]);
-  const calloutOpacity = useTransform(scrollYProgress, [0, 0.22], [1, 0]);
+  const calloutOpacity = useTransform(journey, [0, 0.22], [1, 0]);
 
   // Stop drawing once the page has completely covered the hero.
   const [covered, setCovered] = useState(false);
-  useMotionValueEvent(scrollYProgress, "change", (v) => setCovered(v > 0.995));
+  useMotionValueEvent(journey, "change", (v) => setCovered(v > 0.995));
 
   return (
-    <section ref={track} id="top" className="relative h-[200svh]" aria-label="Introduction">
-      <div className="sticky top-0 h-[100svh] overflow-hidden">
+    <section ref={track} id="top" className="hero-track relative" aria-label="Introduction">
+      <div className="hero-frame">
         <motion.div
           className="relative h-full w-full overflow-hidden bg-ink"
-          style={reduced ? undefined : { scale: frameScale, borderRadius: frameRadius }}
+          style={reduced || unpinned ? undefined : { scale: frameScale, borderRadius: frameRadius }}
         >
           {/* First light behind the summit */}
           <motion.div aria-hidden="true" className="absolute inset-0" style={{ opacity: glowOpacity }}>
@@ -74,7 +87,7 @@ export function Hero() {
 
           <Terrain
             view="peak"
-            progress={scrollYProgress}
+            progress={journey}
             intensity={intensity}
             active={ready && !covered}
             summit={summit}
@@ -137,10 +150,11 @@ export function Hero() {
               delay={0.12}
               stagger={0.07}
               text={"We take local\nbusinesses\nto the *top.*"}
-              className="display text-[clamp(3.15rem,9.6vw,10rem)] text-bone"
+              // Sized by width, and on larger screens also by height, so three lines always fit.
+              className="display text-[clamp(2.5rem,12.6vw,4.5rem)] text-bone md:text-[clamp(4.5rem,min(9.6vw,15.5svh),12.5rem)]"
             />
 
-            <div className="mt-7 flex flex-col gap-7 md:mt-10 md:flex-row md:items-end md:justify-between">
+            <div className="mt-7 flex flex-col gap-7 md:mt-10 lg:flex-row lg:items-end lg:justify-between">
               <Reveal wipe show={ready} delay={0.75} className="max-w-[31rem]">
                 <p className="text-[1.0625rem] leading-relaxed text-bone-dim md:text-lg">
                   APX builds websites that win work, gets them found on Google, runs the Instagram, and builds
@@ -148,7 +162,7 @@ export function Hero() {
                 </p>
               </Reveal>
 
-              <Reveal wipe show={ready} delay={0.9} className="flex flex-wrap items-center gap-3">
+              <Reveal wipe show={ready} delay={0.9} className="flex shrink-0 flex-wrap items-center gap-3">
                 <Magnetic strength={0.2}>
                   <Button href="#contact">Start a project</Button>
                 </Magnetic>
@@ -165,7 +179,8 @@ export function Hero() {
               show={ready}
               delay={1.15}
               y={12}
-              className="mt-8 flex items-center justify-between gap-6 border-t border-white/10 pt-4 md:mt-12 md:pt-5"
+              // The first thing to go when the screen is short.
+              className="mt-8 flex items-center justify-between gap-6 border-t border-white/10 pt-4 md:mt-12 md:pt-5 [@media(max-height:700px)]:hidden"
             >
               <a
                 href="#services"

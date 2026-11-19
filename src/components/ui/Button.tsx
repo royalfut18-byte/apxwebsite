@@ -28,7 +28,7 @@ export function Button({ href, children, variant = "solid", className, external,
       data-cursor-label={cursor}
       {...(external ? { target: "_blank", rel: "noopener" } : {})}
       className={cn(
-        "group relative inline-flex h-14 items-center gap-4 overflow-hidden rounded-full pl-7 pr-2 text-base font-semibold",
+        "group relative inline-flex h-14 shrink-0 items-center gap-4 overflow-hidden whitespace-nowrap rounded-full pl-7 pr-2 text-base font-semibold",
         variant === "solid" ? "bg-bone text-ink" : "border border-white/20 text-bone",
         className,
       )}

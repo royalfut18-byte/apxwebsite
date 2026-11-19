@@ -16,7 +16,8 @@ import { useIntro } from "./providers/IntroProvider";
  * like first light. The wordmark does not fade out. It flies up into the header and
  * becomes the logo (it shares a `layoutId` with the one in <Nav />).
  *
- * Returning visitors in the same tab get a short version: wordmark, then lift.
+ * Returning visitors in the same tab, and anyone on a slow connection, get a short
+ * version: wordmark, then lift.
  */
 
 const WORDS = ["Websites", "SEO", "Instagram", "Tools"];
@@ -25,6 +26,8 @@ const START_MS = 180;
 const LOGO_DRAW_MS = 980;
 const HOLD_MS = 260;
 const SEEN_KEY = "apx:intro";
+const FONT_WAIT_MS = 900;
+const SLOW_LOAD_MS = 3000;
 
 // The curtain's bottom edge. At rest it hangs below the screen in a curve; as the
 // curtain lifts the curve flattens, so the middle appears to trail behind.
@@ -52,28 +55,40 @@ export function Intro() {
         // Storage can be blocked. The full intro is a fine fallback.
       }
     }
-    const seen = seenBefore.current;
+    // Play the short version (wordmark only) for anyone who has already seen the full one in
+    // this tab, and for anyone whose page was slow to load: they have waited long enough.
+    const seen = seenBefore.current || performance.now() > SLOW_LOAD_MS;
 
     const timers: number[] = [];
-    const wordsEnd = seen ? 120 : START_MS + WORDS.length * WORD_MS;
-    const revealAt = wordsEnd + LOGO_DRAW_MS + HOLD_MS;
+    let counter: ReturnType<typeof animate> | undefined;
+    let cancelled = false;
 
-    if (!seen) {
-      WORDS.forEach((_, i) => {
-        timers.push(window.setTimeout(() => setStep(i), START_MS + i * WORD_MS));
-      });
+    function run() {
+      if (cancelled) return;
+      const wordsEnd = seen ? 120 : START_MS + WORDS.length * WORD_MS;
+      const revealAt = wordsEnd + LOGO_DRAW_MS + HOLD_MS;
+
+      if (!seen) {
+        WORDS.forEach((_, i) => {
+          timers.push(window.setTimeout(() => setStep(i), START_MS + i * WORD_MS));
+        });
+      }
+      timers.push(window.setTimeout(() => setStep(WORDS.length), wordsEnd));
+      timers.push(window.setTimeout(() => setPhase("reveal"), revealAt));
+
+      counter = animate(count, 100, { duration: (revealAt - 80) / 1000, ease: ease.inOut });
     }
-    timers.push(window.setTimeout(() => setStep(WORDS.length), wordsEnd));
-    timers.push(window.setTimeout(() => setPhase("reveal"), revealAt));
 
-    const counter = animate(count, 100, {
-      duration: (revealAt - 80) / 1000,
-      ease: ease.inOut,
-    });
+    // Hold the first word until the display face has arrived, so it never flashes in a
+    // fallback font. Capped, so a slow font can only cost a moment.
+    const fonts = document.fonts?.ready ?? Promise.resolve();
+    const cap = new Promise<void>((resolve) => timers.push(window.setTimeout(resolve, FONT_WAIT_MS)));
+    void Promise.race([fonts, cap]).then(run);
 
     return () => {
+      cancelled = true;
       timers.forEach((t) => window.clearTimeout(t));
-      counter.stop();
+      counter?.stop();
     };
     // Runs once: the sequence is fixed from the moment the page loads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,7 +96,7 @@ export function Intro() {
 
   const showLogo = phase === "intro" && step >= WORDS.length;
 
-  // Bypassed (reduced motion, or a deep link): no curtain call, just get out of the way.
+  // Bypassed (reduced motion, a deep link, any page but the home page): just get out of the way.
   if (skipped) return null;
 
   return (

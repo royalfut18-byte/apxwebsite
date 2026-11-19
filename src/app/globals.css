@@ -53,6 +53,8 @@
     color-scheme: dark;
     /* Nothing may widen the page: on phones a single overflowing element zooms the whole layout out. */
     overflow-x: clip;
+    /* The page is locked during the intro. Keeping the gutter means nothing jumps when it unlocks. */
+    scrollbar-gutter: stable;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     scrollbar-color: var(--color-ink-500) var(--color-ink);
@@ -199,6 +201,47 @@ html.is-locked body {
 
   .caret {
     animation: blink 1s steps(1) infinite;
+  }
+
+  /*
+   * The hero is pinned for one screen of scrolling while the rest of the page slides
+   * over it: a track two screens tall, a sticky frame one screen tall, and the next
+   * block pulled up by a screen. (vh first, for browsers without the svh unit.)
+   */
+  .hero-track {
+    height: 200vh;
+    height: 200svh;
+  }
+  .hero-frame {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+  }
+  .hero-follow {
+    margin-top: -100vh;
+    margin-top: -100svh;
+  }
+
+  /*
+   * On very short viewports (a phone on its side, a tiny phone with browser bars showing)
+   * the hero's copy is taller than the screen. There it stops pinning and simply flows,
+   * so nothing can ever be cut off.
+   */
+  @media (max-height: 600px) {
+    .hero-track {
+      height: auto;
+    }
+    .hero-frame {
+      position: relative;
+      height: auto;
+      min-height: 100vh;
+      min-height: 100svh;
+    }
+    .hero-follow {
+      margin-top: 0;
+    }
   }
 
   .pulse-dot {

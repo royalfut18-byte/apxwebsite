@@ -1,6 +1,7 @@
 "use client";
 
 import { MotionConfig } from "framer-motion";
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -52,12 +53,14 @@ export function IntroProvider({ children }: { children: React.ReactNode }) {
   const [requested, setRequested] = useState<IntroPhase>("intro");
   const setPhase = useCallback((next: IntroPhase) => setRequested(next), []);
 
-  // Two kinds of visitor skip the intro entirely: those who ask for reduced motion
-  // (CSS already hides the curtain for them before any script runs), and anyone
-  // arriving on a deep link such as /#contact, who should land on what they asked for.
+  // The intro is skipped entirely for visitors who ask for reduced motion (CSS already
+  // hides the curtain for them before any script runs), for anyone arriving on a deep
+  // link such as /#contact, who should land on what they asked for, and on every page
+  // other than the home page.
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
   const target = useSyncExternalStore(noop, landingTarget, () => "");
-  const skipped = reduced || Boolean(target);
+  const home = usePathname() === "/";
+  const skipped = reduced || Boolean(target) || !home;
   const phase: IntroPhase = skipped ? "done" : requested;
 
   // Keep the page still while the curtain is down.

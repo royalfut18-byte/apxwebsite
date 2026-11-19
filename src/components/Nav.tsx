@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ease } from "@/lib/cn";
@@ -23,6 +24,12 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const lastY = useRef(0);
+  const header = useRef<HTMLElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+
+  // Section links are plain anchors on the home page, and lead back to it from anywhere else.
+  const home = usePathname() === "/";
+  const to = (hash: string) => (home ? hash : `/${hash}`);
 
   // Tuck the bar away on the way down, bring it back on the way up.
   useMotionValueEvent(scrollY, "change", (y) => {
@@ -34,12 +41,39 @@ export function Nav() {
     else if (delta < -6) setHidden(false);
   });
 
-  // Mobile menu: lock the page behind it and close on Escape.
+  // Mobile menu: lock the page behind it, keep keyboard focus inside it, close on Escape.
   useEffect(() => {
     if (!open) return;
     scroller.current?.stop();
     document.documentElement.classList.add("is-locked");
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        toggle.current?.focus();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      // The header (logo, close button) and the menu's links form one loop.
+      const stops = [
+        ...(header.current?.querySelectorAll<HTMLElement>("a[href], button") ?? []),
+        ...(document.getElementById("mobile-menu")?.querySelectorAll<HTMLElement>("a[href]") ?? []),
+      ].filter((el) => el.getClientRects().length > 0);
+      if (stops.length === 0) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      const inside = active !== null && stops.includes(active);
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       scroller.current?.start();
@@ -61,6 +95,7 @@ export function Nav() {
   return (
     <>
       <motion.header
+        ref={header}
         className="fixed inset-x-0 top-0 z-[60]"
         animate={{ y: hidden && !open ? "-110%" : "0%" }}
         transition={{ duration: 0.55, ease: ease.expo }}
@@ -75,7 +110,7 @@ export function Nav() {
 
         <div className="shell flex h-[4.25rem] items-center justify-between md:h-20">
           <a
-            href="#top"
+            href={home ? "#top" : "/"}
             aria-label={`${site.name} home`}
             className="relative block h-[18px] w-[58px] text-bone md:h-5 md:w-16"
             data-cursor="hover"
@@ -120,7 +155,7 @@ export function Nav() {
                   transition={{ duration: 0.7, ease: ease.expo, delay: ready ? 0.55 + i * 0.06 : 0 }}
                 >
                   <a
-                    href={item.href}
+                    href={to(item.href)}
                     className="link-sweep pb-1 text-[0.9375rem] font-medium text-bone-dim hover:text-bone"
                   >
                     {item.label}
@@ -139,8 +174,8 @@ export function Nav() {
           >
             <Magnetic className="hidden md:block" strength={0.25}>
               <a
-                href="#contact"
-                className="group relative inline-flex h-11 items-center gap-2 overflow-hidden rounded-full bg-bone px-5 text-[0.9375rem] font-semibold text-ink"
+                href={to("#contact")}
+                className="group relative inline-flex h-11 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-bone px-5 text-[0.9375rem] font-semibold text-ink"
               >
                 <span className="absolute inset-0 origin-bottom scale-y-0 bg-ember transition-transform duration-500 ease-[var(--ease-expo)] group-hover:scale-y-100" />
                 <span className="relative">Start a project</span>
@@ -149,6 +184,7 @@ export function Nav() {
             </Magnetic>
 
             <button
+              ref={toggle}
               type="button"
               className="relative grid h-11 w-11 place-items-center rounded-full border border-white/15 text-bone md:hidden"
               aria-expanded={open}
@@ -178,9 +214,6 @@ export function Nav() {
           <motion.div
             id="mobile-menu"
             key="menu"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
             className="fixed inset-0 z-[55] flex flex-col bg-ink md:hidden"
             initial={{ clipPath: "inset(0 0 100% 0)" }}
             animate={{ clipPath: "inset(0 0 0% 0)" }}
@@ -196,7 +229,7 @@ export function Nav() {
                 {nav.map((item, i) => (
                   <li key={item.href} className="overflow-hidden border-b border-white/10">
                     <motion.a
-                      href={item.href}
+                      href={to(item.href)}
                       className="display flex items-baseline justify-between py-5 text-[clamp(2.5rem,12vw,4rem)]"
                       initial={{ y: "110%" }}
                       animate={{ y: "0%" }}

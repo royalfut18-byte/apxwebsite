@@ -192,7 +192,7 @@ function ProjectCard({
               target="_blank"
               rel="noopener"
               data-cursor="hover"
-              className="group mt-8 inline-flex h-14 w-fit items-center gap-4 rounded-full pl-7 pr-2 text-base font-semibold transition-transform duration-500 ease-[var(--ease-expo)] hover:scale-[1.03]"
+              className="group mt-8 inline-flex h-14 w-fit items-center gap-4 whitespace-nowrap rounded-full pl-7 pr-2 text-base font-semibold transition-transform duration-500 ease-[var(--ease-expo)] hover:scale-[1.03]"
               style={{ backgroundColor: theme.fg, color: theme.bg }}
             >
               Visit the live site

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 import { ease } from "@/lib/cn";
 import { SUMMIT_METRES } from "@/lib/site";
@@ -18,11 +19,15 @@ const TICKS = Array.from({ length: 21 }, (_, i) => i);
  */
 export function AltitudeHud() {
   const { ready } = useIntro();
+  const home = usePathname() === "/";
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 32, restDelta: 0.0004 });
   const clamped = useTransform(progress, (v) => Math.min(1, Math.max(0, v)));
   const top = useTransform(clamped, (v) => `${(1 - v) * 100}%`);
   const metres = useTransform(clamped, (v) => `${Math.round(v * SUMMIT_METRES).toLocaleString("en-AU")} m`);
+
+  // It measures the climb down the home page; anywhere else it has nothing to say.
+  if (!home) return null;
 
   return (
     <motion.div
