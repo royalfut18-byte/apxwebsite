@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Tokens
+   --------------------------------------------------------------------------- */
+
+@theme {
+  /* Night: the page itself */
+  --color-ink: #070708;
+  --color-ink-900: #0b0b0d;
+  --color-ink-800: #101012;
+  --color-ink-700: #161619;
+  --color-ink-600: #1e1e22;
+  --color-ink-500: #2a2a2f;
+
+  /* Bone: type on dark */
+  --color-bone: #f1eee7;
+  --color-bone-dim: #c9c5bc;
+  --color-mute: #918d86;
+  --color-faint: #5f5c57;
+
+  /* Ember: the one accent. First light on the summit. */
+  --color-ember: #ff5b2e;
+  --color-ember-deep: #e5451b;
+  --color-ember-soft: #ffb49b;
+
+  /* Paper: the single light section */
+  --color-paper: #efebe2;
+  --color-paper-dim: #dcd7cb;
+
+  --font-sans: var(--font-mona), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument), ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-swift: cubic-bezier(0.76, 0, 0.24, 1);
+
+  --breakpoint-3xl: 112rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+  /* Nothing may widen the page: on phones a single overflowing element zooms the whole layout out. */
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-color: var(--color-ink-500) var(--color-ink);
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-ember);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Anchor targets clear the fixed header. */
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Lenis (smooth scroll) recommended rules */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+.lenis [data-lenis-prevent],
+.lenis [data-lenis-prevent-wheel],
+.lenis [data-lenis-prevent-touch] {
+  overscroll-behavior: contain;
+}
+.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* The intro locks scrolling until it has lifted. Only ever set by JS. */
+html.is-locked,
+html.is-locked body {
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Type
+   --------------------------------------------------------------------------- */
+
+/* Display: Mona Sans pushed wide and tight. */
+@utility display {
+  font-family: var(--font-sans);
+  font-stretch: 118%;
+  font-weight: 680;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+}
+
+/* The serif italic used for one emphasised word per headline. */
+@utility accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-stretch: 100%;
+  letter-spacing: -0.02em;
+  color: var(--color-ember);
+}
+
+/* Small mono caps: labels, indexes, coordinates. */
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+@utility shell {
+  width: 100%;
+  max-width: 105rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+  @media (width >= 80rem) {
+    padding-inline: 3.5rem;
+  }
+}
+
+/* Outlined display text (marquee, footer). */
+@utility text-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--color-bone) 42%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Texture
+   --------------------------------------------------------------------------- */
+
+/* Static film grain over everything. Cheap: one tiny inline SVG, no animation. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.055;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------------------------
+   Intro failsafes
+   --------------------------------------------------------------------------- */
+
+/* If scripts never arrive, the intro curtain removes itself so the page is never blocked. */
+@keyframes intro-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.intro-root {
+  animation: intro-failsafe 0.5s linear 8s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-root {
+    display: none !important;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Small things
+   --------------------------------------------------------------------------- */
+
+/* Underline that wipes in from the left. */
+.link-sweep {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition: background-size 0.5s var(--ease-expo);
+}
+.link-sweep:hover,
+.link-sweep:focus-visible {
+  background-size: 100% 1px;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.caret {
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 60%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 2.4s var(--ease-quart) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret,
+  .pulse-dot {
+    animation: none;
+  }
+}

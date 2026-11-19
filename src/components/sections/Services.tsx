@@ -1,0 +1,191 @@
+"use client";
+
+import { AnimatePresence, motion, useInView } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+
+import { cn, ease } from "@/lib/cn";
+import { services, type ServiceKey } from "@/lib/site";
+
+import { SeoDemo } from "../demos/SeoDemo";
+import { SmsDemo } from "../demos/SmsDemo";
+import { SocialDemo } from "../demos/SocialDemo";
+import { WebsiteDemo } from "../demos/WebsiteDemo";
+import { scrollToTarget } from "../providers/SmoothScroll";
+import { Reveal } from "../ui/Reveal";
+import { SectionHeading } from "../ui/SectionHeading";
+
+const DEMOS: Record<ServiceKey, React.ComponentType> = {
+  websites: WebsiteDemo,
+  seo: SeoDemo,
+  social: SocialDemo,
+  tools: SmsDemo,
+};
+
+const CAPTIONS: Record<ServiceKey, string> = {
+  websites: "Designed, built, and it works on every screen",
+  seo: "Climbing the results for the searches that matter",
+  social: "A week of posts, out on schedule",
+  tools: "One message, your whole customer list",
+};
+
+/** The stage each demo plays on. */
+function Stage({ service }: { service: (typeof services)[number] }) {
+  const Demo = DEMOS[service.key];
+  return (
+    <div className="relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(34rem,72vh)]">
+      {/* Survey-map dots and a low ember glow */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(75%_75%_at_50%_45%,black,transparent)]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-1/3 left-1/2 h-2/3 w-[85%] -translate-x-1/2 rounded-[100%] bg-ember/[0.16] blur-[90px]"
+      />
+      <div className="relative flex items-center justify-between px-5 pt-5 md:px-7 md:pt-6">
+        <span className="label text-faint">Fig. {service.index}</span>
+        <span className="label hidden text-faint sm:block">{CAPTIONS[service.key]}</span>
+      </div>
+      <div className="relative min-h-0 flex-1 p-5 md:p-8">
+        <Demo />
+      </div>
+    </div>
+  );
+}
+
+/** Reports when a panel is crossing the middle of the screen. */
+function Panel({
+  index,
+  onActive,
+  children,
+}: {
+  index: number;
+  onActive: (index: number) => void;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const centred = useInView(ref, { margin: "-50% 0px -50% 0px" });
+  useEffect(() => {
+    if (centred) onActive(index);
+  }, [centred, index, onActive]);
+  return (
+    <div ref={ref} id={`service-${services[index].key}`} className="flex min-h-[78vh] items-center py-6">
+      {children}
+    </div>
+  );
+}
+
+export function Services() {
+  const [active, setActive] = useState(0);
+
+  return (
+    <section id="services" aria-labelledby="services-title" className="shell pb-24 pt-24 md:pb-36 md:pt-36">
+      <SectionHeading index="01" label="What we do" title={"Everything it takes|to get you *there.*"} id="services-title">
+        <p>Four services that work better together. Take one, or hand us the lot.</p>
+      </SectionHeading>
+
+      {/* Desktop: the list stays pinned while the demos scroll past. */}
+      <div className="mt-20 hidden grid-cols-12 gap-10 lg:grid xl:gap-16">
+        <div className="col-span-5">
+          <div className="sticky top-0 flex h-screen flex-col justify-center py-24">
+            <ul className="border-t border-white/10">
+              {services.map((service, i) => {
+                const on = i === active;
+                return (
+                  <li key={service.key} className="border-b border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => scrollToTarget(`#service-${service.key}`)}
+                      aria-expanded={on}
+                      className="group flex w-full items-baseline gap-5 py-5 text-left"
+                    >
+                      <span className={cn("label w-7 shrink-0 transition-colors duration-500", on ? "text-ember" : "text-faint")}>
+                        {service.index}
+                      </span>
+                      <span
+                        className={cn(
+                          "display text-[clamp(1.9rem,3vw,3.1rem)] transition-colors duration-500",
+                          on ? "text-bone" : "text-faint group-hover:text-bone-dim",
+                        )}
+                      >
+                        {service.title}
+                      </span>
+                      <motion.span
+                        aria-hidden="true"
+                        className="ml-auto block h-2 w-2 shrink-0 self-center rounded-full bg-ember"
+                        initial={false}
+                        animate={{ scale: on ? 1 : 0, opacity: on ? 1 : 0 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 24 }}
+                      />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {on && (
+                        <motion.div
+                          key="body"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.6, ease: ease.expo }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pb-7 pl-12 pr-6">
+                            <p className="accent text-2xl">{service.kicker}</p>
+                            <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">{service.body}</p>
+                            <ul className="mt-5 flex flex-wrap gap-2">
+                              {service.points.map((point) => (
+                                <li
+                                  key={point}
+                                  className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim"
+                                >
+                                  {point}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+
+        <div className="col-span-7">
+          {services.map((service, i) => (
+            <Panel key={service.key} index={i} onActive={setActive}>
+              <Stage service={service} />
+            </Panel>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile and tablet: one card per service. */}
+      <ul className="mt-14 grid gap-16 lg:hidden">
+        {services.map((service) => (
+          <li key={service.key}>
+            <Reveal>
+              <div className="flex items-baseline gap-4">
+                <span className="label text-ember">{service.index}</span>
+                <h3 className="display text-[clamp(2.1rem,9vw,3.25rem)] text-bone">{service.title}</h3>
+              </div>
+              <p className="accent mt-3 text-2xl">{service.kicker}</p>
+              <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-bone-dim">{service.body}</p>
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {service.points.map((point) => (
+                  <li key={point} className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim">
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+            <Reveal delay={0.1} className="mt-7">
+              <Stage service={service} />
+            </Reveal>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
