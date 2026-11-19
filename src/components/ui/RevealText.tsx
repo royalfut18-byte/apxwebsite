@@ -73,7 +73,15 @@ export function RevealText({
     >
       {lines.map((line, li) => (
         <Fragment key={li}>
-          {li > 0 && (line.soft ? <> <br className="max-md:hidden" /></> : <br />)}
+          {li > 0 &&
+            (line.soft ? (
+              <>
+                {" "}
+                <br className="max-md:hidden" />
+              </>
+            ) : (
+              <br />
+            ))}
           {line.words.map((raw, wi) => {
             const isAccent = /^\*.+\*[.,!?]?$/.test(raw);
             const clean = raw.replace(/\*/g, "");
@@ -85,13 +93,18 @@ export function RevealText({
                   className={cn(
                     "inline-block overflow-hidden align-bottom",
                     // Room for descenders and the slant of the italic, clawed back with margins.
-                    isAccent ? "-mx-[0.06em] -mb-[0.18em] px-[0.06em] pb-[0.18em]" : "-mb-[0.14em] pb-[0.14em]",
+                    isAccent
+                      ? "-mx-[0.06em] -mb-[0.18em] px-[0.06em] pb-[0.18em]"
+                      : "-mb-[0.14em] pb-[0.14em]",
                   )}
                 >
                   <motion.span
                     data-reveal=""
                     variants={word}
-                    className={cn("inline-block origin-bottom-left will-change-transform", isAccent && "accent")}
+                    className={cn(
+                      "inline-block origin-bottom-left will-change-transform",
+                      isAccent && "accent",
+                    )}
                   >
                     {clean}
                   </motion.span>

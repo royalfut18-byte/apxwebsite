@@ -5,8 +5,8 @@ import { site } from "@/lib/site";
  * Receives the contact form.
  *
  * Delivery uses Resend's HTTP API and switches on when RESEND_API_KEY is set
- * (see README). Until then this answers 503 with `fallback: "mailto"`, and the
- * form opens the visitor's own mail app with the message filled in, so an
+ * (see README). Until then this answers `{ ok: false, fallback: "mailto" }`, and
+ * the form opens the visitor's own mail app with the message filled in, so an
  * enquiry is never silently dropped.
  */
 
@@ -42,14 +42,12 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    return Response.json(
-      { error: "Email delivery isn't set up on this deployment.", fallback: "mailto" },
-      { status: 503 },
-    );
+    return Response.json({ ok: false, fallback: "mailto" });
   }
 
   const to = process.env.CONTACT_TO_EMAIL || site.email;
-  const from = process.env.CONTACT_FROM_EMAIL || `${site.name} Website <website@${new URL(site.url).hostname}>`;
+  const from =
+    process.env.CONTACT_FROM_EMAIL || `${site.name} Website <website@${new URL(site.url).hostname}>`;
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -70,10 +68,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       console.error("Contact form: Resend rejected the message", response.status, await response.text());
-      return Response.json(
-        { error: "We couldn't send that just now.", fallback: "mailto" },
-        { status: 502 },
-      );
+      return Response.json({ error: "We couldn't send that just now.", fallback: "mailto" }, { status: 502 });
     }
   } catch (error) {
     console.error("Contact form: could not reach Resend", error);

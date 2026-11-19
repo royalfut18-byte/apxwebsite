@@ -48,6 +48,7 @@ export function Logo({ className, draw = false, delay = 0, play = true, title = 
     <svg
       viewBox="0 0 179 56"
       className={className}
+      data-draw={draw ? "" : undefined}
       role="img"
       aria-label={title}
       fill="none"

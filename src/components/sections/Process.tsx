@@ -37,27 +37,26 @@ function Camp({
   return (
     <span className="relative grid h-5 w-5 place-items-center">
       <span className="absolute inset-0 rounded-full border border-ink/25 bg-paper" />
-      <motion.span className="absolute inset-0 rounded-full bg-ember-deep/20" style={{ opacity: ring, scale: 1.9 }} />
-      <motion.span className="relative block h-2.5 w-2.5 rounded-full bg-ember-deep" style={{ scale, opacity: reached }} />
+      <motion.span
+        className="absolute inset-0 rounded-full bg-ember-deep/20"
+        style={{ opacity: ring, scale: 1.9 }}
+      />
+      <motion.span
+        className="relative block h-2.5 w-2.5 rounded-full bg-ember-deep"
+        style={{ scale, opacity: reached }}
+      />
     </span>
   );
 }
 
-function StepCopy({
-  index,
-  progress,
-  at,
-}: {
-  index: number;
-  progress: MotionValue<number>;
-  at: number;
-}) {
+function StepCopy({ index, progress, at }: { index: number; progress: MotionValue<number>; at: number }) {
   const step = processSteps[index];
-  const opacity = useTransform(progress, [at - 0.07, at + 0.02], [0.28, 1]);
+  // The copy is always fully legible. Reaching a camp just settles it into place:
+  // the route line and the camp marker are what show progress.
   const y = useTransform(progress, [at - 0.07, at + 0.02], [14, 0]);
   return (
-    <motion.div data-reveal="" style={{ opacity, y }}>
-      <p className="label text-ember-deep">{step.index}</p>
+    <motion.div data-reveal="" style={{ y }}>
+      <p className="label text-ember-ink">{step.index}</p>
       <h3 className="display mt-3 text-[clamp(1.75rem,2.6vw,2.6rem)] text-ink">{step.title}</h3>
       <p className="mt-3 max-w-[18rem] text-[1.0625rem] leading-relaxed text-ink/70">{step.body}</p>
     </motion.div>
@@ -99,7 +98,13 @@ export function Process() {
         </svg>
 
         <div className="shell relative py-24 md:py-36">
-          <SectionHeading index="04" label="How it works" title={"The route *up.*"} tone="light" id="process-title">
+          <SectionHeading
+            index="04"
+            label="How it works"
+            title={"The route *up.*"}
+            tone="light"
+            id="process-title"
+          >
             <p>Four stages, start to summit. No mystery and no jargon along the way.</p>
           </SectionHeading>
 
@@ -113,7 +118,13 @@ export function Process() {
                 fill="none"
                 aria-hidden="true"
               >
-                <path d={ROUTE} stroke="rgba(7,7,8,0.16)" strokeWidth="1.5" strokeDasharray="2 7" vectorEffect="non-scaling-stroke" />
+                <path
+                  d={ROUTE}
+                  stroke="rgba(7,7,8,0.16)"
+                  strokeWidth="1.5"
+                  strokeDasharray="2 7"
+                  vectorEffect="non-scaling-stroke"
+                />
                 <motion.path
                   d={ROUTE}
                   stroke="var(--color-ember-deep)"
@@ -136,9 +147,14 @@ export function Process() {
 
               {/* The summit flag */}
               <div className="absolute right-0 top-0 -translate-y-full pb-1">
-                <p className="label flex items-center gap-2 text-ink/55">
+                <p className="label flex items-center gap-2 text-ink/65">
                   <svg viewBox="0 0 56 56" className="h-3 w-3 text-ember-deep" fill="none" aria-hidden="true">
-                    <path d="M2.15 64 L28 12.3 L53.85 64" stroke="currentColor" strokeWidth="11" strokeLinejoin="miter" />
+                    <path
+                      d="M2.15 64 L28 12.3 L53.85 64"
+                      stroke="currentColor"
+                      strokeWidth="11"
+                      strokeLinejoin="miter"
+                    />
                   </svg>
                   Summit
                 </p>
@@ -158,7 +174,7 @@ export function Process() {
               </ol>
             </div>
             {/* Room for the lowest step's copy, which hangs below the drawing. */}
-            <div className="h-52" />
+            <div className="h-36" />
           </div>
 
           {/* Narrow screens: the route runs down the page instead. */}

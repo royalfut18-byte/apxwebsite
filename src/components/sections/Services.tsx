@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useInView } from "framer-motion";
+import { AnimatePresence, motion, useInView, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 import { cn, ease } from "@/lib/cn";
@@ -28,11 +28,32 @@ const CAPTIONS: Record<ServiceKey, string> = {
   tools: "One message, your whole customer list",
 };
 
+/** The demos are drawn at one size. On roomier stages they are scaled up to fill the space. */
+const DEMO_BASE_WIDTH = 640;
+const DEMO_MAX_SCALE = 1.45;
+
 /** The stage each demo plays on. */
 function Stage({ service }: { service: (typeof services)[number] }) {
   const Demo = DEMOS[service.key];
+  const stage = useRef<HTMLDivElement>(null);
+  const scale = useMotionValue(1);
+  const inverse = useTransform(scale, (v) => `${100 / v}%`);
+
+  useEffect(() => {
+    const el = stage.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      scale.set(Math.min(DEMO_MAX_SCALE, Math.max(1, entry.contentRect.width / DEMO_BASE_WIDTH)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [scale]);
+
   return (
-    <div className="relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(34rem,72vh)]">
+    <div
+      ref={stage}
+      className="relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(36rem,74vh)]"
+    >
       {/* Survey-map dots and a low ember glow */}
       <div
         aria-hidden="true"
@@ -46,8 +67,11 @@ function Stage({ service }: { service: (typeof services)[number] }) {
         <span className="label text-faint">Fig. {service.index}</span>
         <span className="label hidden text-faint sm:block">{CAPTIONS[service.key]}</span>
       </div>
-      <div className="relative min-h-0 flex-1 p-5 md:p-8">
-        <Demo />
+      <div className="relative grid min-h-0 flex-1 place-items-center p-5 md:p-8">
+        {/* Laid out smaller by the same factor it is scaled by, so it exactly fills the stage. */}
+        <motion.div style={{ scale, width: inverse, height: inverse }}>
+          <Demo />
+        </motion.div>
       </div>
     </div>
   );
@@ -80,7 +104,12 @@ export function Services() {
 
   return (
     <section id="services" aria-labelledby="services-title" className="shell pb-24 pt-24 md:pb-36 md:pt-36">
-      <SectionHeading index="01" label="What we do" title={"Everything it takes|to get you *there.*"} id="services-title">
+      <SectionHeading
+        index="01"
+        label="What we do"
+        title={"Everything it takes|to get you *there.*"}
+        id="services-title"
+      >
         <p>Four services that work better together. Take one, or hand us the lot.</p>
       </SectionHeading>
 
@@ -93,31 +122,38 @@ export function Services() {
                 const on = i === active;
                 return (
                   <li key={service.key} className="border-b border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => scrollToTarget(`#service-${service.key}`)}
-                      aria-expanded={on}
-                      className="group flex w-full items-baseline gap-5 py-5 text-left"
-                    >
-                      <span className={cn("label w-7 shrink-0 transition-colors duration-500", on ? "text-ember" : "text-faint")}>
-                        {service.index}
-                      </span>
-                      <span
-                        className={cn(
-                          "display text-[clamp(1.9rem,3vw,3.1rem)] transition-colors duration-500",
-                          on ? "text-bone" : "text-faint group-hover:text-bone-dim",
-                        )}
+                    <h3>
+                      <button
+                        type="button"
+                        onClick={() => scrollToTarget(`#service-${service.key}`)}
+                        aria-expanded={on}
+                        className="group flex w-full items-baseline gap-5 py-5 text-left"
                       >
-                        {service.title}
-                      </span>
-                      <motion.span
-                        aria-hidden="true"
-                        className="ml-auto block h-2 w-2 shrink-0 self-center rounded-full bg-ember"
-                        initial={false}
-                        animate={{ scale: on ? 1 : 0, opacity: on ? 1 : 0 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 24 }}
-                      />
-                    </button>
+                        <span
+                          className={cn(
+                            "label w-7 shrink-0 transition-colors duration-500",
+                            on ? "text-ember" : "text-faint",
+                          )}
+                        >
+                          {service.index}
+                        </span>
+                        <span
+                          className={cn(
+                            "display text-[clamp(1.9rem,3vw,3.1rem)] transition-colors duration-500",
+                            on ? "text-bone" : "text-faint group-hover:text-bone-dim",
+                          )}
+                        >
+                          {service.title}
+                        </span>
+                        <motion.span
+                          aria-hidden="true"
+                          className="ml-auto block h-2 w-2 shrink-0 self-center rounded-full bg-ember"
+                          initial={false}
+                          animate={{ scale: on ? 1 : 0, opacity: on ? 1 : 0 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 24 }}
+                        />
+                      </button>
+                    </h3>
                     <AnimatePresence initial={false}>
                       {on && (
                         <motion.div
@@ -130,7 +166,9 @@ export function Services() {
                         >
                           <div className="pb-7 pl-12 pr-6">
                             <p className="accent text-2xl">{service.kicker}</p>
-                            <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">{service.body}</p>
+                            <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">
+                              {service.body}
+                            </p>
                             <ul className="mt-5 flex flex-wrap gap-2">
                               {service.points.map((point) => (
                                 <li
@@ -174,7 +212,10 @@ export function Services() {
               <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-bone-dim">{service.body}</p>
               <ul className="mt-5 flex flex-wrap gap-2">
                 {service.points.map((point) => (
-                  <li key={point} className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim">
+                  <li
+                    key={point}
+                    className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim"
+                  >
                     {point}
                   </li>
                 ))}

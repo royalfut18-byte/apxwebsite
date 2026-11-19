@@ -34,8 +34,7 @@ export const site: SiteConfig = {
   tagline: "We take local businesses to the top.",
   description:
     "APX builds fast, good-looking websites for Australian businesses, then gets them found on Google, runs the Instagram and builds custom tools like SMS senders. One team, pulling in one direction.",
-  shortDescription:
-    "Websites, SEO, Instagram and custom tools for Australian businesses.",
+  shortDescription: "Websites, SEO, Instagram and custom tools for Australian businesses.",
 };
 
 export const nav = [

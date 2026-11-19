@@ -28,12 +28,17 @@ export function AltitudeHud() {
     <motion.div
       aria-hidden="true"
       className="pointer-events-none fixed right-[18px] top-1/2 z-40 hidden -translate-y-1/2 mix-blend-difference xl:block"
-      initial={{ opacity: 0, x: 12 }}
-      animate={ready ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }}
+      // Slides in from beyond the right edge (no fade, so its type is never half-transparent).
+      initial={{ x: 90 }}
+      animate={{ x: ready ? 0 : 90 }}
       transition={{ duration: 1, ease: ease.expo, delay: ready ? 1.4 : 0 }}
     >
       {/* Summit */}
-      <svg viewBox="0 0 56 56" className="mb-2.5 ml-auto h-2.5 w-2.5 translate-x-[4px] text-white" fill="none">
+      <svg
+        viewBox="0 0 56 56"
+        className="mb-2.5 ml-auto h-2.5 w-2.5 translate-x-[4px] text-white"
+        fill="none"
+      >
         <path d="M2.15 64 L28 12.3 L53.85 64" stroke="currentColor" strokeWidth="11" strokeLinejoin="miter" />
       </svg>
 
@@ -48,13 +53,14 @@ export function AltitudeHud() {
           />
         ))}
         {/* Distance climbed */}
-        <motion.div className="absolute bottom-0 right-0 h-full w-px origin-bottom bg-white" style={{ scaleY: clamped }} />
+        <motion.div
+          className="absolute bottom-0 right-0 h-full w-px origin-bottom bg-white"
+          style={{ scaleY: clamped }}
+        />
         {/* Marker and readout */}
         <motion.div className="absolute right-0" style={{ top }}>
           <span className="absolute -right-[3px] -top-[3.5px] block h-[7px] w-[7px] rounded-full bg-white" />
-          <motion.span
-            className="label absolute right-[17px] top-0 block origin-center -translate-y-1/2 whitespace-nowrap tabular-nums text-white [writing-mode:vertical-rl] [transform:translateY(-50%)_rotate(180deg)]"
-          >
+          <motion.span className="label absolute right-[17px] top-0 block origin-center -translate-y-1/2 whitespace-nowrap tabular-nums text-white [writing-mode:vertical-rl] [transform:translateY(-50%)_rotate(180deg)]">
             {metres}
           </motion.span>
         </motion.div>

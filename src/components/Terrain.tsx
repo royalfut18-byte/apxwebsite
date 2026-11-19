@@ -24,6 +24,11 @@ type TerrainProps = {
   intensity?: MotionValue<number>;
   /** Hold rendering until this is true (used to keep the GPU idle behind the intro). */
   active?: boolean;
+  /**
+   * Receives the summit's position on every frame, in CSS pixels from the canvas's
+   * top-left corner, so HTML can be pinned to the peak.
+   */
+  summit?: { x: MotionValue<number>; y: MotionValue<number> };
 };
 
 const NOISE = /* glsl */ `
@@ -204,6 +209,11 @@ void main() {
   float rim = facing * facing * facing * facing * smoothstep(0.15, 0.8, alt);
   vec3 body = uBg + uEmber * rim * 0.11;
 
+  // The very top is capped in solid ember, like the tip of the A in the wordmark.
+  float cap = smoothstep(0.928, 0.94, alt);
+  body = mix(body, uEmber, cap);
+  lineA *= 1.0 - cap;
+
   // The body of the mountain is opaque: it hides what is behind it and shows up
   // as a true silhouette against the glow.
   float bodyA = edge * smoothstep(0.0, 0.45, fog + 0.3);
@@ -214,6 +224,126 @@ void main() {
   outColor = vec4(rgb, a) * uIntensity;
 }
 `;
+
+// --- the same height field in JavaScript ---------------------------------------------
+// Only used once, at start-up, to find where the summit is so a label can be pinned
+// to it. It mirrors the GLSL above (minus the slow "breathing", which barely moves the peak).
+
+const mod289 = (x: number) => x - Math.floor(x / 289) * 289;
+const permute = (x: number) => mod289((x * 34 + 1) * x);
+
+function snoise(x: number, y: number) {
+  const C0 = 0.211324865405187;
+  const C1 = 0.366025403784439;
+  const C2 = -0.577350269189626;
+  const C3 = 0.024390243902439;
+  const s = (x + y) * C1;
+  let ix = Math.floor(x + s);
+  let iy = Math.floor(y + s);
+  const t = (ix + iy) * C0;
+  const x0x = x - ix + t;
+  const x0y = y - iy + t;
+  const i1x = x0x > x0y ? 1 : 0;
+  const i1y = x0x > x0y ? 0 : 1;
+  const x1x = x0x + C0 - i1x;
+  const x1y = x0y + C0 - i1y;
+  const x2x = x0x + C2;
+  const x2y = x0y + C2;
+  ix = mod289(ix);
+  iy = mod289(iy);
+  const corner = (px: number, cx: number, cy: number) => {
+    let m = Math.max(0.5 - (cx * cx + cy * cy), 0);
+    m *= m;
+    m *= m;
+    const gx = 2 * (px * C3 - Math.floor(px * C3)) - 1;
+    const h = Math.abs(gx) - 0.5;
+    const a0 = gx - Math.floor(gx + 0.5);
+    m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+    return m * (a0 * cx + h * cy);
+  };
+  return (
+    130 *
+    (corner(permute(permute(iy) + ix), x0x, x0y) +
+      corner(permute(permute(iy + i1y) + ix + i1x), x1x, x1y) +
+      corner(permute(permute(iy + 1) + ix + 1), x2x, x2y))
+  );
+}
+
+function terrainHeight(px: number, pz: number) {
+  const r = Math.hypot(px, pz);
+  const qx = px + 0.26 * snoise(px * 0.42 + 3.1, pz * 0.42 + 3.1);
+  const qz = pz + 0.26 * snoise(px * 0.42 - 7.7, pz * 0.42 - 7.7);
+  const rq = Math.hypot(qx, qz * 1.12);
+  const summit = 1.42 * Math.exp(-rq * 1.55);
+  const massif = 0.86 * Math.exp(-rq * rq * 0.42);
+  const sdx = qx - 1.25;
+  const sdz = qz - 0.55;
+  const shoulder = 0.5 * Math.exp(-(sdx * sdx + sdz * sdz) * 1.5);
+  let ridges = 0;
+  let amp = 0.5;
+  let weight = 1;
+  let rx = qx * 0.95 + 11;
+  let rz = qz * 0.95 + 11;
+  for (let i = 0; i < 3; i++) {
+    const sn = snoise(rx, rz);
+    let n = 1 - Math.sqrt(sn * sn + 0.035);
+    n *= n;
+    ridges += n * amp * weight;
+    weight = Math.min(1, Math.max(0, n * 1.5));
+    rx = rx * 1.92 + 5.3;
+    rz = rz * 1.92 + 5.3;
+    amp *= 0.4;
+  }
+  const edge = (e0: number, e1: number, v: number) => {
+    const k = Math.min(1, Math.max(0, (v - e0) / (e1 - e0)));
+    return k * k * (3 - 2 * k);
+  };
+  const ridgeMask = Math.exp(-rq * 0.62) * edge(0.05, 0.5, rq);
+  const hills =
+    0.16 * (snoise(px * 0.55 + 20, pz * 0.55 + 20) * 0.5 + 0.5) + 0.045 * snoise(px * 1.3 - 4, pz * 1.3 - 4);
+  const plain = edge(SIZE, SIZE * 0.3, r);
+  return summit + massif + shoulder + ridges * 0.62 * ridgeMask + hills * plain;
+}
+
+/**
+ * Finds the summit of the mesh as drawn: a coarse-to-fine search for the highest point
+ * of the height field, then a snap to the highest nearby grid vertex (the peak is a
+ * sharp cusp, so the mesh tip sits a little below the true maximum).
+ */
+function findSummit(segments: number): Vec3 {
+  let best: Vec3 = [0, -Infinity, 0];
+  let span = 0.9;
+  let steps = 15;
+  for (let pass = 0; pass < 4; pass++) {
+    const step = span / steps;
+    const cx = pass === 0 ? 0 : best[0];
+    const cz = pass === 0 ? 0 : best[2];
+    for (let i = -steps; i <= steps; i++) {
+      for (let j = -steps; j <= steps; j++) {
+        const x = cx + i * step;
+        const z = cz + j * step;
+        const h = terrainHeight(x, z);
+        if (h > best[1]) best = [x, h, z];
+      }
+    }
+    span = step * 2;
+    steps = 6;
+  }
+
+  const cell = (2 * SIZE) / segments;
+  const col = Math.round((best[0] + SIZE) / cell);
+  const row = Math.round((best[2] + SIZE) / cell);
+  let vertex: Vec3 = [0, -Infinity, 0];
+  for (let i = col - 2; i <= col + 2; i++) {
+    for (let j = row - 2; j <= row + 2; j++) {
+      const x = i * cell - SIZE;
+      const z = j * cell - SIZE;
+      const h = terrainHeight(x, z);
+      if (h > vertex[1]) vertex = [x, h, z];
+    }
+  }
+  return vertex;
+}
 
 // --- tiny column-major mat4 helpers -------------------------------------------------
 
@@ -285,7 +415,6 @@ const BG = hexToRgb("#070708");
 const LINE = hexToRgb("#f1eee7");
 const EMBER = hexToRgb("#ff5b2e");
 const SIZE = 5.2;
-const PEAK = 2.55;
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type);
@@ -302,15 +431,359 @@ function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   return shader;
 }
 
-export function Terrain({ className, view = "peak", progress, intensity, active = true }: TerrainProps) {
+type Live = Pick<TerrainProps, "view" | "progress" | "intensity" | "active" | "summit">;
+
+/**
+ * Creates the WebGL scene on `canvas` and returns a function that tears it down.
+ * `live` always holds the component's latest props; `wake` is handed a function that
+ * restarts the render loop.
+ */
+function createScene(
+  canvas: HTMLCanvasElement,
+  live: { current: Live },
+  wake: { current: (() => void) | null },
+  fail: () => void,
+): (() => void) | undefined {
+  const gl = canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: true,
+    premultipliedAlpha: true,
+    powerPreference: "high-performance",
+  });
+  if (!gl) {
+    fail();
+    return;
+  }
+
+  const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+  const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+  const program = gl.createProgram();
+  if (!vs || !fs || !program) {
+    fail();
+    return;
+  }
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    fail();
+    return;
+  }
+  gl.useProgram(program);
+
+  // A flat grid. The vertex shader lifts it into a mountain.
+  const coarse = window.matchMedia("(max-width: 767px)").matches;
+  const N = coarse ? 190 : 270;
+  const positions = new Float32Array((N + 1) * (N + 1) * 2);
+  let k = 0;
+  for (let z = 0; z <= N; z++) {
+    for (let x = 0; x <= N; x++) {
+      positions[k++] = (x / N) * 2 - 1;
+      positions[k++] = (z / N) * 2 - 1;
+    }
+  }
+  const indices = new Uint32Array(N * N * 6);
+  k = 0;
+  for (let z = 0; z < N; z++) {
+    for (let x = 0; x < N; x++) {
+      const a = z * (N + 1) + x;
+      const b = a + 1;
+      const c = a + N + 1;
+      const d = c + 1;
+      indices[k++] = a;
+      indices[k++] = c;
+      indices[k++] = b;
+      indices[k++] = b;
+      indices[k++] = c;
+      indices[k++] = d;
+    }
+  }
+
+  // The highest vertex: where the callout pins, and what "100% altitude" means in the shader.
+  const peak = findSummit(N);
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const ibo = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+  const U = (name: string) => gl.getUniformLocation(program, name);
+  const u = {
+    viewProj: U("uViewProj"),
+    shift: U("uShift"),
+    time: U("uTime"),
+    size: U("uSize"),
+    cam: U("uCam"),
+    bg: U("uBg"),
+    line: U("uLine"),
+    ember: U("uEmber"),
+    pointer: U("uPointer"),
+    res: U("uRes"),
+    peak: U("uPeak"),
+    intensity: U("uIntensity"),
+    fog: U("uFog"),
+    torch: U("uTorch"),
+    pass: U("uPass"),
+    thick: U("uThick"),
+  };
+  gl.uniform1f(u.size, SIZE);
+  gl.uniform1f(u.peak, peak[1]);
+  gl.uniform3fv(u.bg, BG);
+  gl.uniform3fv(u.line, LINE);
+  gl.uniform3fv(u.ember, EMBER);
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0);
+
+  const proj = new Float32Array(16);
+  const viewM = new Float32Array(16);
+  const viewProj = new Float32Array(16);
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+
+  const state = {
+    width: 1,
+    height: 1,
+    dpr: 1,
+    time: reduced ? 14 : 0,
+    last: 0,
+    raf: 0,
+    visible: false,
+    // pointer, normalised to -1..1 across the canvas, eased
+    px: 0,
+    py: 0,
+    tx: 0,
+    ty: 0,
+    // pointer in device pixels for the torch
+    mx: -9999,
+    my: -9999,
+    torch: 0,
+    torchTarget: 0,
+    lost: false,
+  };
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, rect.width);
+    const cssH = Math.max(1, rect.height);
+    // Cap the pixel count so large or dense displays do not pay for detail nobody can see.
+    const budget = 2_400_000;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (cssW * cssH * dpr * dpr > budget) dpr = Math.sqrt(budget / (cssW * cssH));
+    dpr = Math.max(0.75, dpr);
+    state.dpr = dpr;
+    state.width = Math.round(cssW * dpr);
+    state.height = Math.round(cssH * dpr);
+    if (canvas.width !== state.width || canvas.height !== state.height) {
+      canvas.width = state.width;
+      canvas.height = state.height;
+    }
+  }
+
+  function draw(now: number) {
+    if (state.lost) return;
+    const dt = state.last ? Math.min((now - state.last) / 1000, 0.05) : 0.016;
+    state.last = now;
+    if (!reduced) state.time += dt;
+
+    const ease = 1 - Math.exp(-dt * 3.2);
+    state.px += (state.tx - state.px) * ease;
+    state.py += (state.ty - state.py) * ease;
+    state.torch += (state.torchTarget - state.torch) * (1 - Math.exp(-dt * 5));
+
+    const { view: v, progress: prog, intensity: inten } = live.current;
+    // With reduced motion the camera stays put: no scroll-driven fly-over.
+    const p = reduced ? 0 : smooth(Math.min(1, Math.max(0, prog ? prog.get() : 0)));
+    const aspect = state.width / state.height;
+    const portrait = aspect < 0.9;
+
+    let eye: Vec3;
+    let target: Vec3;
+    let up: Vec3 = [0, 1, 0];
+    let fov: number;
+    let shiftX: number;
+    let shiftY: number;
+    let fog: number;
+
+    if (v === "map") {
+      // Straight down, turning slowly like a map on a table.
+      const a = state.time * 0.02;
+      eye = [state.px * 0.35, 9.5, 0.001 + state.py * 0.35];
+      target = [0, 0, 0];
+      up = [Math.sin(a), 0, -Math.cos(a)];
+      fov = (portrait ? 46 : 30) * (Math.PI / 180);
+      shiftX = portrait ? 0 : -0.46;
+      shiftY = portrait ? 0.42 : 0.04;
+      fog = 0.062;
+    } else {
+      const orbit = 0.62 + state.time * 0.028 + state.px * 0.2;
+      const radius = mix(portrait ? 7.4 : 6.1, 3.6, p);
+      const height = mix(portrait ? 2.7 : 2.35, 6.2, p) - state.py * 0.25;
+      eye = [Math.sin(orbit) * radius, height, Math.cos(orbit) * radius];
+      target = [0, mix(1.0, 0.3, p), 0];
+      fov = (portrait ? 44 : 34) * (Math.PI / 180);
+      shiftX = mix(portrait ? 0.06 : 0.5, 0, p);
+      shiftY = mix(portrait ? 0.3 : -0.1, 0, p);
+      fog = mix(0.1, 0.085, p);
+    }
+
+    perspective(proj, fov, aspect, 0.1, 60);
+    lookAt(viewM, eye, target, up);
+    multiply(viewProj, proj, viewM);
+
+    // Tell whoever is listening where the summit is on screen.
+    const pin = live.current.summit;
+    if (pin) {
+      const m = viewProj;
+      const cw = m[3] * peak[0] + m[7] * peak[1] + m[11] * peak[2] + m[15];
+      if (cw > 0) {
+        const nx = (m[0] * peak[0] + m[4] * peak[1] + m[8] * peak[2] + m[12]) / cw + shiftX;
+        const ny = (m[1] * peak[0] + m[5] * peak[1] + m[9] * peak[2] + m[13]) / cw + shiftY;
+        pin.x.set(((nx + 1) / 2) * (state.width / state.dpr));
+        pin.y.set(((1 - ny) / 2) * (state.height / state.dpr));
+      }
+    }
+
+    gl!.viewport(0, 0, state.width, state.height);
+    gl!.uniformMatrix4fv(u.viewProj, false, viewProj);
+    gl!.uniform2f(u.shift, shiftX, shiftY);
+    gl!.uniform1f(u.time, state.time);
+    gl!.uniform3f(u.cam, eye[0], eye[1], eye[2]);
+    gl!.uniform2f(u.pointer, state.mx, state.my);
+    gl!.uniform2f(u.res, state.width, state.height);
+    gl!.uniform1f(u.intensity, inten ? Math.min(1, Math.max(0, inten.get())) : 1);
+    gl!.uniform1f(u.fog, fog);
+    gl!.uniform1f(u.torch, state.torch);
+    // Keep lines a steady visual weight on dense screens instead of hairline-thin.
+    gl!.uniform1f(u.thick, Math.max(1, state.dpr * 0.7));
+
+    gl!.clear(gl!.COLOR_BUFFER_BIT | gl!.DEPTH_BUFFER_BIT);
+
+    // Pass 1: depth only, so only the nearest surface is ever shaded.
+    gl!.uniform1f(u.pass, 0);
+    gl!.colorMask(false, false, false, false);
+    gl!.depthMask(true);
+    gl!.depthFunc(gl!.LESS);
+    gl!.disable(gl!.BLEND);
+    gl!.drawElements(gl!.TRIANGLES, indices.length, gl!.UNSIGNED_INT, 0);
+
+    // Pass 2: colour, blended over whatever sits behind the canvas.
+    gl!.uniform1f(u.pass, 1);
+    gl!.colorMask(true, true, true, true);
+    gl!.depthMask(false);
+    gl!.depthFunc(gl!.LEQUAL);
+    gl!.enable(gl!.BLEND);
+    gl!.blendFunc(gl!.ONE, gl!.ONE_MINUS_SRC_ALPHA);
+    gl!.drawElements(gl!.TRIANGLES, indices.length, gl!.UNSIGNED_INT, 0);
+  }
+
+  function loop(now: number) {
+    state.raf = 0;
+    if (!state.visible || document.hidden || !live.current.active) return;
+    draw(now);
+    if (!reduced) state.raf = requestAnimationFrame(loop);
+  }
+
+  function kick() {
+    if (!state.raf && state.visible && !document.hidden) {
+      state.last = 0;
+      state.raf = requestAnimationFrame(loop);
+    }
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const inside =
+      e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    state.tx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    state.ty = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+    state.tx = Math.max(-1, Math.min(1, state.tx));
+    state.ty = Math.max(-1, Math.min(1, state.ty));
+    state.mx = (e.clientX - rect.left) * state.dpr;
+    state.my = (rect.height - (e.clientY - rect.top)) * state.dpr;
+    state.torchTarget = inside ? 1 : 0;
+  }
+  function onPointerLeave() {
+    state.torchTarget = 0;
+  }
+
+  const ro = new ResizeObserver(() => {
+    resize();
+    if (reduced) kick();
+  });
+  ro.observe(canvas);
+
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      state.visible = entry.isIntersecting;
+      if (state.visible) kick();
+    },
+    { rootMargin: "80px" },
+  );
+  io.observe(canvas);
+
+  const onVisibility = () => kick();
+  const onLost = (e: Event) => {
+    e.preventDefault();
+    state.lost = true;
+    fail();
+  };
+
+  document.addEventListener("visibilitychange", onVisibility);
+  canvas.addEventListener("webglcontextlost", onLost);
+  if (finePointer && !reduced) {
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onPointerLeave);
+  }
+
+  resize();
+  wake.current = kick;
+
+  // A still frame has no loop to pick up changes, so redraw when the fade value moves.
+  const unsubscribe = reduced ? live.current.intensity?.on("change", kick) : undefined;
+
+  return () => {
+    wake.current = null;
+    unsubscribe?.();
+    cancelAnimationFrame(state.raf);
+    ro.disconnect();
+    io.disconnect();
+    document.removeEventListener("visibilitychange", onVisibility);
+    canvas.removeEventListener("webglcontextlost", onLost);
+    window.removeEventListener("pointermove", onPointerMove);
+    document.documentElement.removeEventListener("pointerleave", onPointerLeave);
+    gl.deleteBuffer(vbo);
+    gl.deleteBuffer(ibo);
+    gl.deleteVertexArray(vao);
+    gl.deleteProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+  };
+}
+
+export function Terrain({
+  className,
+  view = "peak",
+  progress,
+  intensity,
+  active = true,
+  summit,
+}: TerrainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
 
   // Latest props for the render loop without restarting WebGL.
-  const live = useRef({ view, progress, intensity, active });
+  const live = useRef({ view, progress, intensity, active, summit });
   const wake = useRef<(() => void) | null>(null);
   useEffect(() => {
-    live.current = { view, progress, intensity, active };
+    live.current = { view, progress, intensity, active, summit };
     if (active) wake.current?.();
   });
 
@@ -318,306 +791,24 @@ export function Terrain({ className, view = "peak", progress, intensity, active 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = canvas.getContext("webgl2", {
-      alpha: true,
-      antialias: true,
-      premultipliedAlpha: true,
-      powerPreference: "high-performance",
-    });
-    if (!gl) {
-      setFailed(true);
-      return;
-    }
-
-    const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-    const program = gl.createProgram();
-    if (!vs || !fs || !program) {
-      setFailed(true);
-      return;
-    }
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      setFailed(true);
-      return;
-    }
-    gl.useProgram(program);
-
-    // A flat grid. The vertex shader lifts it into a mountain.
-    const coarse = window.matchMedia("(max-width: 767px)").matches;
-    const N = coarse ? 190 : 270;
-    const positions = new Float32Array((N + 1) * (N + 1) * 2);
-    let k = 0;
-    for (let z = 0; z <= N; z++) {
-      for (let x = 0; x <= N; x++) {
-        positions[k++] = (x / N) * 2 - 1;
-        positions[k++] = (z / N) * 2 - 1;
-      }
-    }
-    const indices = new Uint32Array(N * N * 6);
-    k = 0;
-    for (let z = 0; z < N; z++) {
-      for (let x = 0; x < N; x++) {
-        const a = z * (N + 1) + x;
-        const b = a + 1;
-        const c = a + N + 1;
-        const d = c + 1;
-        indices[k++] = a;
-        indices[k++] = c;
-        indices[k++] = b;
-        indices[k++] = b;
-        indices[k++] = c;
-        indices[k++] = d;
-      }
-    }
-
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    const vbo = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    const ibo = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
-
-    const U = (name: string) => gl.getUniformLocation(program, name);
-    const u = {
-      viewProj: U("uViewProj"),
-      shift: U("uShift"),
-      time: U("uTime"),
-      size: U("uSize"),
-      cam: U("uCam"),
-      bg: U("uBg"),
-      line: U("uLine"),
-      ember: U("uEmber"),
-      pointer: U("uPointer"),
-      res: U("uRes"),
-      peak: U("uPeak"),
-      intensity: U("uIntensity"),
-      fog: U("uFog"),
-      torch: U("uTorch"),
-      pass: U("uPass"),
-      thick: U("uThick"),
+    // Compiling shaders and building the mesh is the heaviest thing this page does, and
+    // nothing needs it in the first moments. Do it when the browser is idle instead of
+    // during hydration.
+    let dispose: (() => void) | undefined;
+    let cancelled = false;
+    const begin = () => {
+      if (!cancelled) dispose = createScene(canvas, live, wake, () => setFailed(true));
     };
-    gl.uniform1f(u.size, SIZE);
-    gl.uniform1f(u.peak, PEAK);
-    gl.uniform3fv(u.bg, BG);
-    gl.uniform3fv(u.line, LINE);
-    gl.uniform3fv(u.ember, EMBER);
-
-    gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(0, 0, 0, 0);
-
-    const proj = new Float32Array(16);
-    const viewM = new Float32Array(16);
-    const viewProj = new Float32Array(16);
-
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const finePointer = window.matchMedia("(pointer: fine)").matches;
-
-    const state = {
-      width: 1,
-      height: 1,
-      dpr: 1,
-      time: reduced ? 14 : 0,
-      last: 0,
-      raf: 0,
-      visible: false,
-      // pointer, normalised to -1..1 across the canvas, eased
-      px: 0,
-      py: 0,
-      tx: 0,
-      ty: 0,
-      // pointer in device pixels for the torch
-      mx: -9999,
-      my: -9999,
-      torch: 0,
-      torchTarget: 0,
-      lost: false,
-    };
-
-    function resize() {
-      const rect = canvas!.getBoundingClientRect();
-      const cssW = Math.max(1, rect.width);
-      const cssH = Math.max(1, rect.height);
-      // Cap the pixel count so large or dense displays do not pay for detail nobody can see.
-      const budget = 2_400_000;
-      let dpr = Math.min(window.devicePixelRatio || 1, 2);
-      if (cssW * cssH * dpr * dpr > budget) dpr = Math.sqrt(budget / (cssW * cssH));
-      dpr = Math.max(0.75, dpr);
-      state.dpr = dpr;
-      state.width = Math.round(cssW * dpr);
-      state.height = Math.round(cssH * dpr);
-      if (canvas!.width !== state.width || canvas!.height !== state.height) {
-        canvas!.width = state.width;
-        canvas!.height = state.height;
-      }
-    }
-
-    function draw(now: number) {
-      if (state.lost) return;
-      const dt = state.last ? Math.min((now - state.last) / 1000, 0.05) : 0.016;
-      state.last = now;
-      if (!reduced) state.time += dt;
-
-      const ease = 1 - Math.exp(-dt * 3.2);
-      state.px += (state.tx - state.px) * ease;
-      state.py += (state.ty - state.py) * ease;
-      state.torch += (state.torchTarget - state.torch) * (1 - Math.exp(-dt * 5));
-
-      const { view: v, progress: prog, intensity: inten } = live.current;
-      const p = smooth(Math.min(1, Math.max(0, prog ? prog.get() : 0)));
-      const aspect = state.width / state.height;
-      const portrait = aspect < 0.9;
-
-      let eye: Vec3;
-      let target: Vec3;
-      let up: Vec3 = [0, 1, 0];
-      let fov: number;
-      let shiftX: number;
-      let shiftY: number;
-      let fog: number;
-
-      if (v === "map") {
-        // Straight down, turning slowly like a map on a table.
-        const a = state.time * 0.02;
-        eye = [state.px * 0.35, 9.5, 0.001 + state.py * 0.35];
-        target = [0, 0, 0];
-        up = [Math.sin(a), 0, -Math.cos(a)];
-        fov = (portrait ? 46 : 30) * (Math.PI / 180);
-        shiftX = portrait ? 0 : -0.46;
-        shiftY = portrait ? 0.42 : 0.04;
-        fog = 0.062;
-      } else {
-        const orbit = 0.62 + state.time * 0.028 + state.px * 0.2;
-        const radius = mix(portrait ? 7.4 : 6.1, 3.6, p);
-        const height = mix(portrait ? 2.7 : 2.35, 6.2, p) - state.py * 0.25;
-        eye = [Math.sin(orbit) * radius, height, Math.cos(orbit) * radius];
-        target = [0, mix(1.0, 0.3, p), 0];
-        fov = (portrait ? 44 : 34) * (Math.PI / 180);
-        shiftX = mix(portrait ? 0.06 : 0.5, 0, p);
-        shiftY = mix(portrait ? 0.3 : -0.1, 0, p);
-        fog = mix(0.1, 0.085, p);
-      }
-
-      perspective(proj, fov, aspect, 0.1, 60);
-      lookAt(viewM, eye, target, up);
-      multiply(viewProj, proj, viewM);
-
-      gl!.viewport(0, 0, state.width, state.height);
-      gl!.uniformMatrix4fv(u.viewProj, false, viewProj);
-      gl!.uniform2f(u.shift, shiftX, shiftY);
-      gl!.uniform1f(u.time, state.time);
-      gl!.uniform3f(u.cam, eye[0], eye[1], eye[2]);
-      gl!.uniform2f(u.pointer, state.mx, state.my);
-      gl!.uniform2f(u.res, state.width, state.height);
-      gl!.uniform1f(u.intensity, inten ? Math.min(1, Math.max(0, inten.get())) : 1);
-      gl!.uniform1f(u.fog, fog);
-      gl!.uniform1f(u.torch, state.torch);
-      // Keep lines a steady visual weight on dense screens instead of hairline-thin.
-      gl!.uniform1f(u.thick, Math.max(1, state.dpr * 0.7));
-
-      gl!.clear(gl!.COLOR_BUFFER_BIT | gl!.DEPTH_BUFFER_BIT);
-
-      // Pass 1: depth only, so only the nearest surface is ever shaded.
-      gl!.uniform1f(u.pass, 0);
-      gl!.colorMask(false, false, false, false);
-      gl!.depthMask(true);
-      gl!.depthFunc(gl!.LESS);
-      gl!.disable(gl!.BLEND);
-      gl!.drawElements(gl!.TRIANGLES, indices.length, gl!.UNSIGNED_INT, 0);
-
-      // Pass 2: colour, blended over whatever sits behind the canvas.
-      gl!.uniform1f(u.pass, 1);
-      gl!.colorMask(true, true, true, true);
-      gl!.depthMask(false);
-      gl!.depthFunc(gl!.LEQUAL);
-      gl!.enable(gl!.BLEND);
-      gl!.blendFunc(gl!.ONE, gl!.ONE_MINUS_SRC_ALPHA);
-      gl!.drawElements(gl!.TRIANGLES, indices.length, gl!.UNSIGNED_INT, 0);
-    }
-
-    function loop(now: number) {
-      state.raf = 0;
-      if (!state.visible || document.hidden || !live.current.active) return;
-      draw(now);
-      if (!reduced) state.raf = requestAnimationFrame(loop);
-    }
-
-    function kick() {
-      if (!state.raf && state.visible && !document.hidden) {
-        state.last = 0;
-        state.raf = requestAnimationFrame(loop);
-      }
-    }
-
-    function onPointerMove(e: PointerEvent) {
-      const rect = canvas!.getBoundingClientRect();
-      const inside =
-        e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-      state.tx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      state.ty = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-      state.tx = Math.max(-1, Math.min(1, state.tx));
-      state.ty = Math.max(-1, Math.min(1, state.ty));
-      state.mx = (e.clientX - rect.left) * state.dpr;
-      state.my = (rect.height - (e.clientY - rect.top)) * state.dpr;
-      state.torchTarget = inside ? 1 : 0;
-    }
-    function onPointerLeave() {
-      state.torchTarget = 0;
-    }
-
-    const ro = new ResizeObserver(() => {
-      resize();
-      if (reduced) kick();
-    });
-    ro.observe(canvas);
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        state.visible = entry.isIntersecting;
-        if (state.visible) kick();
-      },
-      { rootMargin: "80px" },
-    );
-    io.observe(canvas);
-
-    const onVisibility = () => kick();
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      state.lost = true;
-      setFailed(true);
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    canvas.addEventListener("webglcontextlost", onLost);
-    if (finePointer && !reduced) {
-      window.addEventListener("pointermove", onPointerMove, { passive: true });
-      document.documentElement.addEventListener("pointerleave", onPointerLeave);
-    }
-
-    resize();
-    wake.current = kick;
+    const idle = typeof window.requestIdleCallback === "function";
+    const handle = idle
+      ? window.requestIdleCallback(begin, { timeout: 1200 })
+      : window.setTimeout(begin, 200);
 
     return () => {
-      wake.current = null;
-      cancelAnimationFrame(state.raf);
-      ro.disconnect();
-      io.disconnect();
-      document.removeEventListener("visibilitychange", onVisibility);
-      canvas.removeEventListener("webglcontextlost", onLost);
-      window.removeEventListener("pointermove", onPointerMove);
-      document.documentElement.removeEventListener("pointerleave", onPointerLeave);
-      gl.deleteBuffer(vbo);
-      gl.deleteBuffer(ibo);
-      gl.deleteVertexArray(vao);
-      gl.deleteProgram(program);
-      gl.deleteShader(vs);
-      gl.deleteShader(fs);
+      cancelled = true;
+      if (idle) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+      dispose?.();
     };
   }, []);
 

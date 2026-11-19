@@ -32,7 +32,7 @@ const HANG = "M0 0 H100 V100 Q50 132 0 100 Z";
 const FLAT = "M0 0 H100 V100 Q50 100 0 100 Z";
 
 export function Intro() {
-  const { phase, setPhase } = useIntro();
+  const { phase, skipped, setPhase } = useIntro();
   const [step, setStep] = useState(-1);
   // Read once and remembered, so a development double-mount cannot flip it.
   const seenBefore = useRef<boolean | null>(null);
@@ -80,6 +80,9 @@ export function Intro() {
   }, []);
 
   const showLogo = phase === "intro" && step >= WORDS.length;
+
+  // Bypassed (reduced motion, or a deep link): no curtain call, just get out of the way.
+  if (skipped) return null;
 
   return (
     <>

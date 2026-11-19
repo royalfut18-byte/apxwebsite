@@ -13,13 +13,17 @@ import { ContactForm } from "./ContactForm";
 export function Contact() {
   const ref = useRef<HTMLElement>(null);
   const near = useInView(ref, { margin: "200px" });
+  // The map is a second WebGL scene. It is not created until the visitor gets close.
+  const arrived = useInView(ref, { margin: "600px", once: true });
 
   return (
     <section ref={ref} id="contact" aria-labelledby="contact-title" className="relative overflow-hidden">
       {/* The same mountain as the hero, now seen from directly above: you are at the top. */}
       <div aria-hidden="true" className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(50%_50%_at_26%_42%,rgba(255,91,46,0.16)_0%,rgba(255,91,46,0)_70%)]" />
-        <Terrain view="map" active={near} className="absolute inset-0 h-full w-full opacity-55" />
+        {arrived ? (
+          <Terrain view="map" active={near} className="absolute inset-0 h-full w-full opacity-55" />
+        ) : null}
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,var(--color-ink)_0%,rgba(7,7,8,0)_22%,rgba(7,7,8,0)_70%,var(--color-ink)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(42%_46%_at_24%_58%,rgba(7,7,8,0.78)_0%,rgba(7,7,8,0)_100%)]" />
       </div>
@@ -42,12 +46,15 @@ export function Contact() {
             />
             <Reveal delay={0.15}>
               <p className="mt-8 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim md:text-lg">
-                Tell us about your business and what you&rsquo;re after. A new site, more people finding
-                you, an Instagram that runs itself, or a tool nobody else makes.
+                Tell us about your business and what you&rsquo;re after. A new site, more people finding you,
+                an Instagram that runs itself, or a tool nobody else makes.
               </p>
             </Reveal>
 
-            <Reveal delay={0.25} className="mt-10 grid gap-6 border-t border-white/10 pt-8 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <Reveal
+              delay={0.25}
+              className="mt-10 grid gap-6 border-t border-white/10 pt-8 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"
+            >
               <div>
                 <p className="label text-mute">Email</p>
                 <a

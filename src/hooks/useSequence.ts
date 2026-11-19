@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
  * Steps through a fixed list of durations, looping forever while `active`.
  * Returns the current step index. `durations` must be a stable reference.
  */
-export function useSequence(durations: readonly number[], active: boolean, initial = 0) {
-  const [step, setStep] = useState(initial);
+export function useSequence(durations: readonly number[], active: boolean) {
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (!active) return;

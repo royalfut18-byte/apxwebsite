@@ -18,7 +18,9 @@ const spring = { type: "spring", stiffness: 260, damping: 30, mass: 0.9 } as con
 /** A local search, with your listing working its way from fourth to first. */
 export function SeoDemo() {
   const { ref, playing, reduced } = useDemo();
-  const step = useSequence(STEPS, playing, reduced ? 4 : 0);
+  const running = useSequence(STEPS, playing);
+  // Reduced motion: hold the end state.
+  const step = reduced ? 4 : running;
   const typed = useTypewriter(QUERY, playing && step === 0, step === 0 ? "typing" : "done", 62);
   const query = step === 0 ? typed : QUERY;
 
@@ -29,7 +31,11 @@ export function SeoDemo() {
   const top = position === 0;
 
   return (
-    <div ref={ref} aria-hidden="true" className="relative mx-auto flex h-full w-full max-w-[30rem] flex-col justify-center gap-3">
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="relative mx-auto flex h-full w-full max-w-[30rem] flex-col justify-center gap-3"
+    >
       {/* Search bar */}
       <div className="flex h-11 items-center gap-3 rounded-full border border-white/10 bg-ink-900 px-4">
         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-mute" fill="none">
@@ -74,7 +80,9 @@ export function SeoDemo() {
                     Y
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold leading-tight text-bone">Your business</span>
+                    <span className="block truncate text-[13px] font-semibold leading-tight text-bone">
+                      Your business
+                    </span>
                     <span className="block truncate font-mono text-[9.5px] leading-tight text-ember-soft">
                       yourbusiness.com.au
                     </span>
@@ -136,13 +144,11 @@ export function SeoDemo() {
             strokeWidth="1.75"
             strokeLinecap="round"
             initial={false}
-            animate={{ pathLength: step === 0 ? 0.04 : [0.3, 0.55, 0.8, 1][Math.min(step, 4) - 1] ?? 1 }}
+            animate={{ pathLength: step === 0 ? 0.04 : ([0.3, 0.55, 0.8, 1][Math.min(step, 4) - 1] ?? 1) }}
             transition={{ duration: 0.9, ease: ease.quart }}
           />
         </svg>
-        <span className="font-mono text-[11px] font-semibold tabular-nums text-bone">
-          #{position + 1}
-        </span>
+        <span className="font-mono text-[11px] font-semibold tabular-nums text-bone">#{position + 1}</span>
       </div>
     </div>
   );

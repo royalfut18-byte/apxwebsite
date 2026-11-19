@@ -40,7 +40,19 @@ type FieldProps = {
   placeholder?: string;
 };
 
-function Field({ label, name, value, onChange, error, optional, type = "text", autoComplete, maxLength, multiline, placeholder }: FieldProps) {
+function Field({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  optional,
+  type = "text",
+  autoComplete,
+  maxLength,
+  multiline,
+  placeholder,
+}: FieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const shared = {
@@ -116,7 +128,10 @@ export function ContactForm() {
   };
 
   const toggleNeed = (need: string) =>
-    set("needs", enquiry.needs.includes(need) ? enquiry.needs.filter((n) => n !== need) : [...enquiry.needs, need]);
+    set(
+      "needs",
+      enquiry.needs.includes(need) ? enquiry.needs.filter((n) => n !== need) : [...enquiry.needs, need],
+    );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -139,11 +154,15 @@ export function ContactForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...clean, website }),
       });
-      if (response.ok) {
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        fallback?: string;
+        fields?: EnquiryErrors;
+      };
+      if (response.ok && data.ok) {
         setStatus("sent");
         return;
       }
-      const data = (await response.json().catch(() => ({}))) as { fallback?: string; fields?: EnquiryErrors };
       if (response.status === 422 && data.fields) {
         setErrors(data.fields);
         setStatus("idle");
@@ -226,10 +245,12 @@ export function ContactForm() {
             ) : status === "mailto" ? (
               <>
                 <p className="label text-ember">One more step</p>
-                <h3 className="display mt-5 text-[clamp(2rem,4vw,3.25rem)] text-bone">Hit send in your mail app.</h3>
+                <h3 className="display mt-5 text-[clamp(2rem,4vw,3.25rem)] text-bone">
+                  Hit send in your mail app.
+                </h3>
                 <p className="mt-4 max-w-md text-lg leading-relaxed text-bone-dim">
-                  We&rsquo;ve opened an email with everything you wrote, ready to go. If nothing opened, send it
-                  straight to us instead.
+                  We&rsquo;ve opened an email with everything you wrote, ready to go. If nothing opened, send
+                  it straight to us instead.
                 </p>
                 <div className="mt-7 flex flex-wrap items-center gap-3">
                   <a
@@ -250,10 +271,15 @@ export function ContactForm() {
             ) : (
               <>
                 <p className="label text-ember">That didn&rsquo;t send</p>
-                <h3 className="display mt-5 text-[clamp(2rem,4vw,3.25rem)] text-bone">Something went wrong.</h3>
+                <h3 className="display mt-5 text-[clamp(2rem,4vw,3.25rem)] text-bone">
+                  Something went wrong.
+                </h3>
                 <p className="mt-4 max-w-md text-lg leading-relaxed text-bone-dim">
                   It&rsquo;s us, not you. Your message is still here. Try again, or email us directly at{" "}
-                  <a href={mailtoFor(cleanEnquiry(enquiry))} className="text-bone underline decoration-ember underline-offset-4">
+                  <a
+                    href={mailtoFor(cleanEnquiry(enquiry))}
+                    className="text-bone underline decoration-ember underline-offset-4"
+                  >
                     {site.email}
                   </a>
                   .
@@ -264,7 +290,7 @@ export function ContactForm() {
             <button
               type="button"
               onClick={status === "error" ? () => setStatus("idle") : reset}
-              className="link-sweep mt-10 w-fit pb-1 text-[0.9375rem] font-medium text-bone-dim transition-colors hover:text-bone"
+              className="link-sweep mt-10 w-fit pb-1 text-[0.9375rem] font-medium text-bone-dim hover:text-bone"
             >
               {status === "error" ? "Back to the form" : "Send another message"}
             </button>
@@ -274,6 +300,10 @@ export function ContactForm() {
             key="form"
             noValidate
             onSubmit={onSubmit}
+            // Without scripts the browser falls back to handing the fields to the visitor's mail app.
+            action={`mailto:${site.email}`}
+            method="post"
+            encType="text/plain"
             aria-label="Start a project"
             className="grid gap-9"
             initial={{ opacity: 0, y: 24 }}
@@ -388,7 +418,12 @@ export function ContactForm() {
                       />
                     ) : (
                       <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
-                        <path d="M2 12 12 2M4.5 2H12v7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" />
+                        <path
+                          d="M2 12 12 2M4.5 2H12v7.5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="square"
+                        />
                       </svg>
                     )}
                   </span>

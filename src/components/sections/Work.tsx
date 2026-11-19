@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  motion,
-  useMotionValue,
-  useScroll,
-  useSpring,
-  useTransform,
-  type MotionValue,
-} from "framer-motion";
+import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
 
@@ -28,7 +21,16 @@ const ARROW = (
  * so as the card moves through the screen they scroll, like someone browsing it.
  * The pair tilts gently toward the pointer.
  */
-function Devices({ project, travel }: { project: Project; travel: MotionValue<number> }) {
+function Devices({
+  project,
+  travel,
+  still,
+}: {
+  project: Project;
+  travel: MotionValue<number>;
+  /** Reduced motion: no scrolling captures, no tilt. */
+  still: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const tiltX = useMotionValue(0);
   const tiltY = useMotionValue(0);
@@ -39,7 +41,7 @@ function Devices({ project, travel }: { project: Project; travel: MotionValue<nu
   const mobileY = useTransform(travel, [0, 1], ["0%", "-34%"]);
 
   function onMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.pointerType !== "mouse" || !ref.current) return;
+    if (still || e.pointerType !== "mouse" || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width - 0.5;
     const py = (e.clientY - rect.top) / rect.height - 0.5;
@@ -66,7 +68,7 @@ function Devices({ project, travel }: { project: Project; travel: MotionValue<nu
             <span className="hidden w-12 md:block" />
           </div>
           <div className="relative aspect-[16/10.4] overflow-hidden bg-white">
-            <motion.div className="will-change-transform" style={{ y: desktopY }}>
+            <motion.div className="will-change-transform" style={still ? undefined : { y: desktopY }}>
               <Image
                 src={project.desktop}
                 alt={`The ${project.name} website on a desktop screen`}
@@ -85,7 +87,7 @@ function Devices({ project, travel }: { project: Project; travel: MotionValue<nu
           style={{ transform: "translateZ(50px)" }}
         >
           <div className="relative aspect-[9/18.6] overflow-hidden rounded-[0.9rem] bg-white md:rounded-[1.4rem]">
-            <motion.div className="will-change-transform" style={{ y: mobileY }}>
+            <motion.div className="will-change-transform" style={still ? undefined : { y: mobileY }}>
               <Image
                 src={project.mobile}
                 alt={`The ${project.name} website on a phone`}
@@ -108,12 +110,14 @@ function ProjectCard({
   total,
   progress,
   stacked,
+  still,
 }: {
   project: Project;
   index: number;
   total: number;
   progress: MotionValue<number>;
   stacked: boolean;
+  still: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -123,10 +127,13 @@ function ProjectCard({
   const scale = useTransform(progress, [start + 0.45 / total, 1], [1, 1 - (total - 1 - index) * 0.04]);
   const shade = useTransform(progress, [start + 0.5 / total, end], [0, index === total - 1 ? 0 : 0.45]);
 
-  // How far this card has travelled through the screen, 0..1, for the scrolling captures.
+  // Drives the scrolling captures, 0..1. Stacked: starts from the top of the client's page the
+  // moment the card pins, and scrolls until the next card has covered it. Unstacked (phones):
+  // follows the card's own journey through the screen instead.
   const { scrollYProgress: own } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const pinned = useTransform(progress, [Math.max(0, start - 1 / total), end], [0, 1]);
-  const travel = stacked ? pinned : own;
+  const pinned = useTransform(progress, [start, end], [0, 1]);
+  const passing = useTransform(own, [0.4, 0.9], [0, 1]);
+  const travel = stacked ? pinned : passing;
 
   const { theme } = project;
   const number = String(index + 1).padStart(2, "0");
@@ -134,10 +141,10 @@ function ProjectCard({
   return (
     <div
       ref={ref}
-      className="px-3 pb-5 md:sticky md:top-0 md:flex md:h-screen md:items-center md:px-6 md:pb-0 md:pt-20 xl:px-14"
+      className="pointer-events-none px-3 pb-5 md:px-6 md:pb-8 lg:sticky lg:top-0 lg:flex lg:h-screen lg:items-center lg:pb-0 lg:pt-20 xl:px-14"
     >
       <motion.article
-        className="relative mx-auto w-full max-w-[104rem] origin-top overflow-hidden rounded-[1.75rem] md:h-[min(47rem,calc(100vh-7.5rem))] md:rounded-[2.25rem]"
+        className="pointer-events-auto relative mx-auto w-full max-w-[104rem] origin-top overflow-hidden rounded-[1.75rem] md:rounded-[2.25rem] lg:h-[min(47rem,calc(100vh-7.5rem))]"
         style={{
           scale: stacked ? scale : 1,
           top: stacked ? index * 14 : 0,
@@ -145,19 +152,19 @@ function ProjectCard({
           color: theme.fg,
         }}
       >
-        <div className="grid h-full gap-10 p-6 pb-0 md:grid-cols-12 md:gap-6 md:p-10 md:pb-0 lg:p-12 lg:pb-0 xl:p-14 xl:pb-0">
+        <div className="grid h-full gap-10 p-6 pb-0 md:gap-12 md:p-10 md:pb-0 lg:grid-cols-12 lg:gap-6 lg:p-12 lg:pb-0 xl:p-14 xl:pb-0">
           {/* Words */}
-          <div className="flex flex-col md:col-span-5 md:pb-10 lg:pb-12 xl:col-span-4 xl:pb-14">
+          <div className="flex flex-col lg:col-span-5 lg:pb-12 xl:col-span-4 xl:pb-14">
             <div className="flex items-center justify-between gap-4">
               <p className="label" style={{ color: theme.accent }}>
-                {number} <span style={{ opacity: 0.45 }}>/ {String(total).padStart(2, "0")}</span>
+                {number} <span style={{ color: theme.sub }}>/ {String(total).padStart(2, "0")}</span>
               </p>
               <p className="label text-right" style={{ color: theme.sub }}>
                 {project.sector}
               </p>
             </div>
 
-            <h3 className="display mt-8 text-[clamp(2.4rem,4.6vw,4.9rem)] md:mt-auto">{project.name}</h3>
+            <h3 className="display mt-8 text-[clamp(2.4rem,4.6vw,4.9rem)] lg:mt-auto">{project.name}</h3>
             {project.place ? (
               <p className="mt-3 font-serif text-xl italic md:text-2xl" style={{ color: theme.accent }}>
                 {project.place}
@@ -208,14 +215,18 @@ function ProjectCard({
             aria-hidden="true"
             data-cursor="label"
             data-cursor-label="Visit site"
-            className="relative block self-end pl-[6%] md:col-span-7 md:translate-y-[9%] md:pl-[9%] xl:col-span-8"
+            className="relative block self-end pl-[6%] md:pl-[8%] lg:col-span-7 lg:translate-y-[9%] lg:pl-[9%] xl:col-span-8"
           >
-            <Devices project={project} travel={travel} />
+            <Devices project={project} travel={travel} still={still} />
           </a>
         </div>
 
         {/* Dims as the next card slides over */}
-        <motion.div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-ink" style={{ opacity: stacked ? shade : 0 }} />
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-ink"
+          style={{ opacity: stacked ? shade : 0 }}
+        />
       </motion.article>
     </div>
   );
@@ -223,18 +234,24 @@ function ProjectCard({
 
 export function Work() {
   const stack = useRef<HTMLDivElement>(null);
-  const stacked = useMediaQuery("(min-width: 768px) and (prefers-reduced-motion: no-preference)");
+  const stacked = useMediaQuery("(min-width: 1024px) and (prefers-reduced-motion: no-preference)");
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
   const { scrollYProgress } = useScroll({ target: stack, offset: ["start start", "end end"] });
 
   return (
     <section id="work" aria-labelledby="work-title" className="pt-24 md:pt-36">
       <div className="shell">
-        <SectionHeading index="02" label="Selected work" title={"Real businesses.\n*Live* sites."} id="work-title">
+        <SectionHeading
+          index="02"
+          label="Selected work"
+          title={"Real businesses.\n*Live* sites."}
+          id="work-title"
+        >
           <p>Every project below is live right now. Click through and have a look around.</p>
         </SectionHeading>
       </div>
 
-      <div ref={stack} className="relative mt-14 md:mt-10">
+      <div ref={stack} className="relative mt-14 lg:mt-10">
         {projects.map((project, i) => (
           <ProjectCard
             key={project.slug}
@@ -243,6 +260,7 @@ export function Work() {
             total={projects.length}
             progress={scrollYProgress}
             stacked={stacked}
+            still={reduced}
           />
         ))}
       </div>
@@ -252,10 +270,7 @@ export function Work() {
           <p className="display max-w-3xl text-[clamp(1.6rem,3.2vw,3rem)] text-bone">
             Yours could be <span className="accent">next.</span>
           </p>
-          <a
-            href="#contact"
-            className="link-sweep pb-1 text-lg font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
-          >
+          <a href="#contact" className="link-sweep pb-1 text-lg font-medium text-bone-dim hover:text-bone">
             Tell us what you need
           </a>
         </Reveal>

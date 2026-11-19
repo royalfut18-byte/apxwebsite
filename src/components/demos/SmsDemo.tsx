@@ -17,7 +17,9 @@ const TOTAL = 248;
 /** A bulk SMS tool: write once, send to the whole list, watch them deliver. */
 export function SmsDemo() {
   const { ref, playing, reduced } = useDemo();
-  const step = useSequence(STEPS, playing, reduced ? 3 : 0);
+  const running = useSequence(STEPS, playing);
+  // Reduced motion: hold the end state.
+  const step = reduced ? 3 : running;
   const typed = useTypewriter(MESSAGE, playing && step === 0, step === 0 ? "typing" : "done", 34);
   const message = step === 0 ? typed : MESSAGE;
 
@@ -49,7 +51,9 @@ export function SmsDemo() {
           {hasChip ? (
             <>
               {before}
-              <span className="rounded bg-ember/20 px-1 py-px font-mono text-[11px] text-ember-soft">first_name</span>
+              <span className="rounded bg-ember/20 px-1 py-px font-mono text-[11px] text-ember-soft">
+                first_name
+              </span>
               {after}
             </>
           ) : (
@@ -59,9 +63,7 @@ export function SmsDemo() {
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="font-mono text-[10px] tabular-nums text-faint">
-            {message.length}/160
-          </span>
+          <span className="font-mono text-[10px] tabular-nums text-faint">{message.length}/160</span>
           <motion.span
             className={cn(
               "flex h-8 items-center gap-2 rounded-full px-3.5 text-[11px] font-semibold",
@@ -95,26 +97,43 @@ export function SmsDemo() {
         <ul className="flex flex-1 flex-col justify-center gap-1.5">
           {RECIPIENTS.map((tail, i) => {
             const shown = sending || done;
+            const delay = sending ? 0.25 + i * 0.36 : 0;
             return (
-              <motion.li
+              <li
                 key={tail}
-                className="flex items-center justify-between rounded-lg bg-white/[0.035] px-2.5 py-1.5"
-                initial={false}
-                animate={shown ? { opacity: 1, x: 0 } : { opacity: 0.18, x: 0 }}
-                transition={{ duration: 0.45, ease: ease.expo, delay: sending ? 0.25 + i * 0.36 : 0 }}
+                className="relative flex items-center justify-between rounded-lg bg-white/[0.035] px-2.5 py-1.5"
               >
-                <span className="font-mono text-[10px] tracking-wide text-bone-dim">04&bull;&bull; &bull;&bull;&bull; {tail}</span>
+                {/* Waiting: a blank bar. Sent: the (masked) number fades in over it. */}
+                <motion.span
+                  className="absolute left-2.5 top-1/2 block h-1.5 w-20 -translate-y-1/2 rounded-full bg-white/10"
+                  initial={false}
+                  animate={{ opacity: shown ? 0 : 1 }}
+                  transition={{ duration: 0.3, delay }}
+                />
+                <motion.span
+                  className="font-mono text-[10px] tracking-wide text-bone-dim"
+                  initial={false}
+                  animate={{ opacity: shown ? 1 : 0 }}
+                  transition={{ duration: 0.45, ease: ease.expo, delay }}
+                >
+                  04&bull;&bull; &bull;&bull;&bull; {tail}
+                </motion.span>
                 <motion.span
                   className="grid h-3.5 w-3.5 place-items-center rounded-full bg-ember"
                   initial={false}
                   animate={shown ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 520, damping: 20, delay: sending ? 0.45 + i * 0.36 : 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 520,
+                    damping: 20,
+                    delay: sending ? 0.45 + i * 0.36 : 0,
+                  }}
                 >
                   <svg viewBox="0 0 10 10" className="h-2 w-2" fill="none">
                     <path d="m2 5.2 2 2 4-4.4" stroke="#070708" strokeWidth="1.7" />
                   </svg>
                 </motion.span>
-              </motion.li>
+              </li>
             );
           })}
         </ul>
@@ -124,7 +143,10 @@ export function SmsDemo() {
             className="h-full origin-left rounded-full bg-ember"
             initial={false}
             animate={{ scaleX: done ? 1 : sending ? 0.94 : 0 }}
-            transition={{ duration: sending ? 2.4 : done ? 0.3 : 0.4, ease: sending ? ease.quart : "easeOut" }}
+            transition={{
+              duration: sending ? 2.4 : done ? 0.3 : 0.4,
+              ease: sending ? ease.quart : "easeOut",
+            }}
           />
         </div>
       </div>

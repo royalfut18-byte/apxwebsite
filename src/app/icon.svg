@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <clipPath id="box"><rect x="10" y="13" width="44" height="38"/></clipPath>
+    <clipPath id="tip"><rect x="10" y="13" width="44" height="10.6"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#070708"/>
+  <g clip-path="url(#box)" fill="none" stroke-width="7.6" stroke-linejoin="miter">
+    <path d="M9.4 57 L32 21.4 L54.6 57" stroke="#f1eee7"/>
+    <path d="M9.4 57 L32 21.4 L54.6 57" stroke="#ff5b2e" clip-path="url(#tip)"/>
+  </g>
+</svg>

@@ -23,8 +23,10 @@ function Word({
   range: [number, number];
   still: boolean;
 }) {
-  const opacity = useTransform(progress, range, [0.14, 1]);
   const accent = word.startsWith("*");
+  // Unlit words stay readable (above 3:1 for type this size); they brighten rather than appear.
+  // The ember word starts brighter, because the colour is darker to begin with.
+  const opacity = useTransform(progress, range, [accent ? 0.72 : 0.4, 1]);
   return (
     <motion.span data-reveal="" style={{ opacity: still ? 1 : opacity }} className={cn(accent && "accent")}>
       {word.replace(/\*/g, "")}{" "}
@@ -57,7 +59,15 @@ export function Statement() {
             // Each word fades up over a short window, a few words overlapping at a time.
             const start = i / words.length;
             const end = Math.min(1, start + 3.5 / words.length);
-            return <Word key={`${word}-${i}`} word={word} progress={scrollYProgress} range={[start, end]} still={reduced} />;
+            return (
+              <Word
+                key={`${word}-${i}`}
+                word={word}
+                progress={scrollYProgress}
+                range={[start, end]}
+                still={reduced}
+              />
+            );
           })}
         </p>
       </div>

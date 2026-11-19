@@ -63,7 +63,9 @@ const spring = { type: "spring", stiffness: 300, damping: 28, mass: 0.8 } as con
 /** A week of posts going out on schedule, the grid filling as each one lands. */
 export function SocialDemo() {
   const { ref, playing, reduced } = useDemo();
-  const step = useSequence(STEPS, playing, reduced ? 3 : 0);
+  const running = useSequence(STEPS, playing);
+  // Reduced motion: hold the end state.
+  const step = reduced ? 3 : running;
 
   // Three posts are already up; one more is published on each step.
   const published = step;
@@ -72,7 +74,11 @@ export function SocialDemo() {
   const feed = [...visible].reverse();
 
   return (
-    <div ref={ref} aria-hidden="true" className="mx-auto flex h-full w-full max-w-[20rem] flex-col justify-center gap-4">
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="mx-auto flex h-full w-full max-w-[20rem] flex-col justify-center gap-4"
+    >
       {/* Profile */}
       <div className="flex items-center gap-3">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[conic-gradient(from_180deg,#ff5b2e,#ffb49b,#ff5b2e)] p-[2px]">
@@ -86,7 +92,9 @@ export function SocialDemo() {
             <span className="tabular-nums text-bone-dim">{3 + published}</span> posts this fortnight
           </span>
         </span>
-        <span className="rounded-full border border-white/15 px-3 py-1.5 text-[10px] font-semibold text-bone">Following</span>
+        <span className="rounded-full border border-white/15 px-3 py-1.5 text-[10px] font-semibold text-bone">
+          Following
+        </span>
       </div>
 
       {/* Feed grid */}
@@ -97,7 +105,10 @@ export function SocialDemo() {
               key={post.id}
               layout
               style={{ borderRadius: 10 }}
-              className={cn("relative grid aspect-square place-items-center overflow-hidden p-1.5", post.className)}
+              className={cn(
+                "relative grid aspect-square place-items-center overflow-hidden p-1.5",
+                post.className,
+              )}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
@@ -113,7 +124,11 @@ export function SocialDemo() {
                   animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.15, 1, 1.2], y: [0, 0, 0, -8] }}
                   transition={{ duration: 1.2, times: [0, 0.25, 0.7, 1], ease: ease.quart, delay: 0.25 }}
                 >
-                  <svg viewBox="0 0 24 24" className="h-7 w-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]" fill="#f1eee7">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-7 w-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                    fill="#f1eee7"
+                  >
                     <path d="M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.9a4.3 4.3 0 0 1 7.5 2.6c0 5.6-7.5 10-7.5 10Z" />
                   </svg>
                 </motion.span>

@@ -19,7 +19,15 @@ type SectionHeadingProps = {
  * The opening of every section: a numbered label and a short aside on one line,
  * then the headline across the full width beneath them.
  */
-export function SectionHeading({ index, label, title, children, tone = "dark", id, className }: SectionHeadingProps) {
+export function SectionHeading({
+  index,
+  label,
+  title,
+  children,
+  tone = "dark",
+  id,
+  className,
+}: SectionHeadingProps) {
   const light = tone === "light";
   return (
     <header className={className}>
@@ -30,8 +38,8 @@ export function SectionHeading({ index, label, title, children, tone = "dark", i
         )}
       >
         <Reveal y={14}>
-          <p className={cn("label flex items-center gap-3", light ? "text-ink/55" : "text-mute")}>
-            <span className={light ? "text-ember-deep" : "text-ember"}>{index}</span>
+          <p className={cn("label flex items-center gap-3", light ? "text-ink/65" : "text-mute")}>
+            <span className={light ? "text-ember-ink" : "text-ember"}>{index}</span>
             <span className={cn("h-px w-8", light ? "bg-ink/25" : "bg-white/20")} />
             {label}
           </p>
@@ -53,7 +61,10 @@ export function SectionHeading({ index, label, title, children, tone = "dark", i
         as="h2"
         id={id}
         text={title}
-        className={cn("display mt-8 text-[clamp(2.6rem,7.6vw,8.25rem)] md:mt-12", light ? "text-ink" : "text-bone")}
+        className={cn(
+          "display mt-8 text-[clamp(2.6rem,7.6vw,8.25rem)] md:mt-12",
+          light ? "text-ink [&_.accent]:text-ember-deep" : "text-bone",
+        )}
       />
     </header>
   );

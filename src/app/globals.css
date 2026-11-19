@@ -17,12 +17,15 @@
   --color-bone: #f1eee7;
   --color-bone-dim: #c9c5bc;
   --color-mute: #918d86;
-  --color-faint: #5f5c57;
+  /* The quietest text colour. Still clears 4.5:1 on every dark surface. */
+  --color-faint: #807d77;
 
   /* Ember: the one accent. First light on the summit. */
   --color-ember: #ff5b2e;
   --color-ember-deep: #e5451b;
   --color-ember-soft: #ffb49b;
+  /* Ember for small text on the light section, where the bright one is too faint to read. */
+  --color-ember-ink: #b8360f;
 
   /* Paper: the single light section */
   --color-paper: #efebe2;
@@ -41,42 +44,44 @@
 
 /* ---------------------------------------------------------------------------
    Base
+   Kept inside a cascade layer so that utility classes can always override it.
    --------------------------------------------------------------------------- */
 
-html {
-  background: var(--color-ink);
-  color-scheme: dark;
-  /* Nothing may widen the page: on phones a single overflowing element zooms the whole layout out. */
-  overflow-x: clip;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  scrollbar-color: var(--color-ink-500) var(--color-ink);
-}
+@layer base {
+  html {
+    background: var(--color-ink);
+    color-scheme: dark;
+    /* Nothing may widen the page: on phones a single overflowing element zooms the whole layout out. */
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scrollbar-color: var(--color-ink-500) var(--color-ink);
+  }
 
-body {
-  background: var(--color-ink);
-  color: var(--color-bone);
-  font-family: var(--font-sans);
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: clip;
-}
+  body {
+    background: var(--color-ink);
+    color: var(--color-bone);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
 
-::selection {
-  background: var(--color-ember);
-  color: var(--color-ink);
-}
+  ::selection {
+    background: var(--color-ember);
+    color: var(--color-ink);
+  }
 
-:focus-visible {
-  outline: 2px solid var(--color-ember);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
+  :focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: 3px;
+  }
 
-/* Anchor targets clear the fixed header. */
-[id] {
-  scroll-margin-top: 5rem;
+  /* Anchor targets clear the fixed header. */
+  [id] {
+    scroll-margin-top: 5rem;
+  }
 }
 
 /* Lenis (smooth scroll) recommended rules */
@@ -96,7 +101,7 @@ html.lenis body {
   pointer-events: none;
 }
 
-/* The intro locks scrolling until it has lifted. Only ever set by JS. */
+/* The intro and the mobile menu lock scrolling while they are up. Only ever set by JS. */
 html.is-locked,
 html.is-locked body {
   overflow: hidden;
@@ -156,18 +161,65 @@ html.is-locked body {
 }
 
 /* ---------------------------------------------------------------------------
-   Texture
+   Components
    --------------------------------------------------------------------------- */
 
-/* Static film grain over everything. Cheap: one tiny inline SVG, no animation. */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  pointer-events: none;
-  opacity: 0.055;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+@layer components {
+  /* Static film grain over everything. Cheap: one tiny inline SVG, no animation. */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* A full-screen blend layer is a lot to ask of a phone's GPU while scrolling. */
+  @media (width < 48rem) {
+    .grain {
+      display: none;
+    }
+  }
+
+  /* Underline that wipes in from the left. Carries its own colour transition. */
+  .link-sweep {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition:
+      background-size 0.5s var(--ease-expo),
+      color 0.3s ease;
+  }
+  .link-sweep:hover,
+  .link-sweep:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  .caret {
+    animation: blink 1s steps(1) infinite;
+  }
+
+  .pulse-dot {
+    animation: pulse-dot 2.4s var(--ease-quart) infinite;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-dot {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 60%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -189,51 +241,6 @@ html.is-locked body {
   .intro-root {
     display: none !important;
   }
-  html {
-    scroll-behavior: auto !important;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Small things
-   --------------------------------------------------------------------------- */
-
-/* Underline that wipes in from the left. */
-.link-sweep {
-  background-image: linear-gradient(currentColor, currentColor);
-  background-position: 0 100%;
-  background-repeat: no-repeat;
-  background-size: 0% 1px;
-  transition: background-size 0.5s var(--ease-expo);
-}
-.link-sweep:hover,
-.link-sweep:focus-visible {
-  background-size: 100% 1px;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
-.caret {
-  animation: blink 1s steps(1) infinite;
-}
-
-@keyframes pulse-dot {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 60%, transparent);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 10px transparent;
-  }
-}
-.pulse-dot {
-  animation: pulse-dot 2.4s var(--ease-quart) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
   .caret,
   .pulse-dot {
     animation: none;

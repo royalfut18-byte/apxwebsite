@@ -11,6 +11,11 @@ import { useIntro } from "./providers/IntroProvider";
 import { scroller } from "./providers/SmoothScroll";
 import { Magnetic } from "./ui/Magnetic";
 
+// Header items drop in behind a wipe rather than fading, so they are opaque from the first frame.
+// The clip is released afterwards so focus rings and the magnetic button are not cut off.
+const WIPE_HIDDEN = { clipPath: "inset(0% 0% 100% 0%)", y: -12 };
+const WIPE_SHOWN = { clipPath: "inset(0% 0% 0% 0%)", y: 0, transitionEnd: { clipPath: "none" } };
+
 export function Nav() {
   const { phase, ready } = useIntro();
   const { scrollY } = useScroll();
@@ -85,6 +90,23 @@ export function Nav() {
                 <Logo className="block h-full w-full" />
               </motion.div>
             )}
+            {/* The logo normally arrives from the intro. Without scripts there is no intro, so show it outright. */}
+            <noscript>
+              <svg
+                viewBox="0 0 179 56"
+                className="absolute inset-0 h-full w-full"
+                fill="none"
+                overflow="hidden"
+                aria-hidden="true"
+              >
+                <g stroke="currentColor" strokeWidth="11">
+                  <path d="M2.15 64 L28 12.3 L53.85 64" />
+                  <path d="M73.5 64 V5.5 H92 A14 14 0 0 1 92 33.5 H73.5" />
+                  <path d="M121.9 -8 L178.1 64" />
+                  <path d="M178.1 -8 L121.9 64" />
+                </g>
+              </svg>
+            </noscript>
           </a>
 
           <nav aria-label="Primary" className="hidden md:block">
@@ -92,13 +114,14 @@ export function Nav() {
               {nav.map((item, i) => (
                 <motion.li
                   key={item.href}
-                  initial={{ opacity: 0, y: -12 }}
-                  animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+                  data-reveal=""
+                  initial={WIPE_HIDDEN}
+                  animate={ready ? WIPE_SHOWN : WIPE_HIDDEN}
                   transition={{ duration: 0.7, ease: ease.expo, delay: ready ? 0.55 + i * 0.06 : 0 }}
                 >
                   <a
                     href={item.href}
-                    className="link-sweep pb-1 text-[0.9375rem] font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
+                    className="link-sweep pb-1 text-[0.9375rem] font-medium text-bone-dim hover:text-bone"
                   >
                     {item.label}
                   </a>
@@ -108,9 +131,10 @@ export function Nav() {
           </nav>
 
           <motion.div
+            data-reveal=""
             className="flex items-center gap-3"
-            initial={{ opacity: 0, y: -12 }}
-            animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+            initial={WIPE_HIDDEN}
+            animate={ready ? WIPE_SHOWN : WIPE_HIDDEN}
             transition={{ duration: 0.7, ease: ease.expo, delay: ready ? 0.8 : 0 }}
           >
             <Magnetic className="hidden md:block" strength={0.25}>
@@ -195,7 +219,10 @@ export function Nav() {
               transition={{ duration: 0.6, ease: ease.expo, delay: 0.5 }}
             >
               <p className="label mb-3 text-mute">Say hello</p>
-              <a href={`mailto:${site.email}`} className="text-xl font-medium text-bone underline decoration-ember underline-offset-4">
+              <a
+                href={`mailto:${site.email}`}
+                className="text-xl font-medium text-bone underline decoration-ember underline-offset-4"
+              >
                 {site.email}
               </a>
             </motion.div>

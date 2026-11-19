@@ -4,6 +4,7 @@ import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
 import { useIsClient } from "@/hooks/useIsClient";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { nav, site, SUMMIT_METRES } from "@/lib/site";
 
 import { Logo } from "../Logo";
@@ -23,6 +24,7 @@ export function Footer() {
   // The wordmark rises into place as the footer comes into view.
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
   const markY = useTransform(scrollYProgress, [0, 1], ["22%", "0%"]);
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
 
   return (
     <footer ref={ref} className="relative overflow-hidden border-t border-white/[0.07] bg-ink">
@@ -42,7 +44,7 @@ export function Footer() {
                 <li key={item.href}>
                   <a
                     href={item.href}
-                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
+                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim hover:text-bone"
                   >
                     {item.label}
                   </a>
@@ -57,7 +59,7 @@ export function Footer() {
               <li>
                 <a
                   href={`mailto:${site.email}`}
-                  className="link-sweep pb-0.5 text-lg font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
+                  className="link-sweep pb-0.5 text-lg font-medium text-bone-dim hover:text-bone"
                 >
                   Email
                 </a>
@@ -66,7 +68,7 @@ export function Footer() {
                 <li>
                   <a
                     href={`tel:${site.phone.replace(/\s+/g, "")}`}
-                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
+                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim hover:text-bone"
                   >
                     Call
                   </a>
@@ -78,7 +80,7 @@ export function Footer() {
                     href={`https://www.instagram.com/${site.instagram}`}
                     target="_blank"
                     rel="noopener"
-                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim transition-colors duration-300 hover:text-bone"
+                    className="link-sweep pb-0.5 text-lg font-medium text-bone-dim hover:text-bone"
                   >
                     Instagram
                   </a>
@@ -89,7 +91,11 @@ export function Footer() {
         </div>
 
         {/* The wordmark, as big as the page allows. It draws itself on arrival. */}
-        <motion.div ref={markRef} className="mt-16 text-bone md:mt-24" style={{ y: markY }}>
+        <motion.div
+          ref={markRef}
+          className="mt-16 text-bone md:mt-24"
+          style={reduced ? undefined : { y: markY }}
+        >
           <Logo draw play={markSeen} className="block h-auto w-full" title={site.name} />
         </motion.div>
       </div>
@@ -103,7 +109,7 @@ export function Footer() {
             <span className="mx-3 text-faint">/</span>
             <LocalTime />
           </p>
-          <p className="label text-faint">
+          <p className="label text-mute">
             {SUMMIT_METRES.toLocaleString("en-AU")} m: as high as mainland Australia goes
           </p>
           <button
@@ -112,7 +118,12 @@ export function Footer() {
             className="label group flex w-fit items-center gap-2 text-mute transition-colors duration-300 hover:text-bone"
           >
             Back to base
-            <svg viewBox="0 0 12 12" className="h-3 w-3 transition-transform duration-500 ease-[var(--ease-expo)] group-hover:-translate-y-1" fill="none" aria-hidden="true">
+            <svg
+              viewBox="0 0 12 12"
+              className="h-3 w-3 transition-transform duration-500 ease-[var(--ease-expo)] group-hover:-translate-y-1"
+              fill="none"
+              aria-hidden="true"
+            >
               <path d="M6 11V1M1.5 5.5 6 1l4.5 4.5" stroke="currentColor" strokeWidth="1.4" />
             </svg>
           </button>

@@ -15,7 +15,9 @@ const spring = { type: "spring", stiffness: 210, damping: 30, mass: 0.9 } as con
 /** A site assembling itself, taking an enquiry, then reflowing to a phone. */
 export function WebsiteDemo() {
   const { ref, playing, reduced } = useDemo();
-  const step = useSequence(STEPS, playing, reduced ? 2 : 0);
+  const running = useSequence(STEPS, playing);
+  // Reduced motion: hold the finished page, enquiry and all.
+  const step = reduced ? 2 : running;
 
   const built = step >= 1;
   const clicked = step === 2;
@@ -39,7 +41,11 @@ export function WebsiteDemo() {
         )}
       >
         {/* Browser bar */}
-        <motion.div layout transition={spring} className="flex h-8 items-center gap-1.5 border-b border-white/[0.07] px-3">
+        <motion.div
+          layout
+          transition={spring}
+          className="flex h-8 items-center gap-1.5 border-b border-white/[0.07] px-3"
+        >
           <span className="h-2 w-2 rounded-full bg-white/15" />
           <span className="h-2 w-2 rounded-full bg-white/15" />
           <span className="h-2 w-2 rounded-full bg-white/15" />
@@ -71,8 +77,14 @@ export function WebsiteDemo() {
           </motion.div>
 
           {/* Hero: copy + picture */}
-          <div className={cn("flex min-h-0 flex-1 gap-4", phone ? "flex-col-reverse gap-2.5" : "items-center")}>
-            <motion.div layout transition={spring} className={cn("flex flex-col gap-2", phone ? "w-full" : "w-[52%]")}>
+          <div
+            className={cn("flex min-h-0 flex-1 gap-4", phone ? "flex-col-reverse gap-2.5" : "items-center")}
+          >
+            <motion.div
+              layout
+              transition={spring}
+              className={cn("flex flex-col gap-2", phone ? "w-full" : "w-[52%]")}
+            >
               <motion.span {...pop(2)} className="block h-4 w-[92%] rounded-[5px] bg-bone" />
               <motion.span {...pop(3)} className="block h-4 w-[64%] rounded-[5px] bg-bone" />
               <motion.span {...pop(4)} className="mt-1 block h-1.5 w-[84%] rounded-full bg-white/20" />
@@ -107,8 +119,14 @@ export function WebsiteDemo() {
                 {...pop(3)}
                 className="absolute inset-0 bg-[radial-gradient(120%_90%_at_20%_10%,#ff8a5c_0%,#ff5b2e_32%,#7a1f08_70%,#1a0905_100%)]"
               />
-              <motion.span {...pop(5)} className="absolute bottom-2 left-2 block h-5 w-5 rounded-full bg-bone/90" />
-              <motion.span {...pop(6)} className="absolute bottom-2.5 left-9 block h-1.5 w-12 rounded-full bg-bone/70" />
+              <motion.span
+                {...pop(5)}
+                className="absolute bottom-2 left-2 block h-5 w-5 rounded-full bg-bone/90"
+              />
+              <motion.span
+                {...pop(6)}
+                className="absolute bottom-2.5 left-9 block h-1.5 w-12 rounded-full bg-bone/70"
+              />
             </motion.div>
           </div>
 

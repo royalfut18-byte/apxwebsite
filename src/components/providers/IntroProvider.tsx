@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
+import { MotionConfig } from "framer-motion";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -18,23 +27,38 @@ type IntroContextValue = {
   phase: IntroPhase;
   /** True once the hero may start animating in. */
   ready: boolean;
+  /** True when the intro is being bypassed altogether, so it should vanish rather than animate away. */
+  skipped: boolean;
   setPhase: (phase: IntroPhase) => void;
 };
 
 const IntroContext = createContext<IntroContextValue>({
   phase: "done",
   ready: true,
+  skipped: false,
   setPhase: () => {},
 });
+
+const noop = () => () => {};
+
+/** The fragment the page was opened with, e.g. "contact" for /#contact. Fixed for the life of the page. */
+let landedOn: string | null = null;
+function landingTarget() {
+  if (landedOn === null) landedOn = decodeURIComponent(window.location.hash.slice(1));
+  return landedOn;
+}
 
 export function IntroProvider({ children }: { children: React.ReactNode }) {
   const [requested, setRequested] = useState<IntroPhase>("intro");
   const setPhase = useCallback((next: IntroPhase) => setRequested(next), []);
 
-  // Visitors who ask for reduced motion skip the intro entirely.
-  // (CSS already hides the curtain for them before any script runs.)
+  // Two kinds of visitor skip the intro entirely: those who ask for reduced motion
+  // (CSS already hides the curtain for them before any script runs), and anyone
+  // arriving on a deep link such as /#contact, who should land on what they asked for.
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const phase: IntroPhase = reduced ? "done" : requested;
+  const target = useSyncExternalStore(noop, landingTarget, () => "");
+  const skipped = reduced || Boolean(target);
+  const phase: IntroPhase = skipped ? "done" : requested;
 
   // Keep the page still while the curtain is down.
   useLayoutEffect(() => {
@@ -48,9 +72,23 @@ export function IntroProvider({ children }: { children: React.ReactNode }) {
     return () => root.classList.remove("is-locked");
   }, [phase]);
 
-  const value = useMemo(() => ({ phase, ready: phase !== "intro", setPhase }), [phase, setPhase]);
+  // Deep link: once the page is unlocked, go to the section that was asked for.
+  useLayoutEffect(() => {
+    if (!target) return;
+    document.getElementById(target)?.scrollIntoView();
+  }, [target]);
 
-  return <IntroContext.Provider value={value}>{children}</IntroContext.Provider>;
+  const value = useMemo(
+    () => ({ phase, ready: phase !== "intro", skipped, setPhase }),
+    [phase, skipped, setPhase],
+  );
+
+  return (
+    <IntroContext.Provider value={value}>
+      {/* "user": for visitors who ask for reduced motion, movement is dropped and only fades remain. */}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </IntroContext.Provider>
+  );
 }
 
 export function useIntro() {
