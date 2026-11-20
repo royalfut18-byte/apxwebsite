@@ -33,7 +33,7 @@ const dolls = find("toys");
 
 /**
  * The screens on the hero's wall of work, in the order they come round.
- * Each is a real page from a client site, with anything that names the client blurred out
+ * Each is a real page from a client site, with anything that names the client removed
  * (see the note in projects.ts). Neighbours are always different clients.
  */
 export const screens: Screen[] = [

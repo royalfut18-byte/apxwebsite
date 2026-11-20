@@ -9,7 +9,7 @@ import yrMobile from "@/assets/work/yrmart-mobile.webp";
 /**
  * Client confidentiality: only YR Mart is shown by name, with its address and a link.
  * The other projects are described by what the business does. Their screenshots have the
- * business name, logo and phone numbers blurred out, and nothing here (names, links,
+ * business name and logo painted out and phone numbers replaced with dummy ones, and nothing here (names, links,
  * file names) says whose they are. Keep it that way when adding work.
  */
 export type Project = {
