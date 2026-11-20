@@ -4,7 +4,7 @@ The website for APX: websites, SEO, Instagram and custom tools for Australian bu
 
 One long page, built to show the kind of work APX does: a Framer Motion intro, a hero where
 real client sites stand in a slowly turning 3D ring over a flowing glow, animated demos of
-each service, and a portfolio of real, live client sites.
+each service, and a portfolio of real client sites (only one of them shown by name).
 
 ## Before you launch
 

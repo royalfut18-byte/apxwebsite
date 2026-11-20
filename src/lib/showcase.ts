@@ -1,14 +1,14 @@
 import type { StaticImageData } from "next/image";
 
-import ask1 from "@/assets/showcase/askelectrical-1.webp";
-import ask2 from "@/assets/showcase/askelectrical-2.webp";
-import ask3 from "@/assets/showcase/askelectrical-3.webp";
-import lox1 from "@/assets/showcase/lusciouslox-1.webp";
-import lox2 from "@/assets/showcase/lusciouslox-2.webp";
-import lox3 from "@/assets/showcase/lusciouslox-3.webp";
-import dolls1 from "@/assets/showcase/powerdolls-1.webp";
-import dolls2 from "@/assets/showcase/powerdolls-2.webp";
-import dolls3 from "@/assets/showcase/powerdolls-3.webp";
+import ask1 from "@/assets/showcase/electrician-1.webp";
+import ask2 from "@/assets/showcase/electrician-2.webp";
+import ask3 from "@/assets/showcase/electrician-3.webp";
+import lox1 from "@/assets/showcase/salon-1.webp";
+import lox2 from "@/assets/showcase/salon-2.webp";
+import lox3 from "@/assets/showcase/salon-3.webp";
+import dolls1 from "@/assets/showcase/toys-1.webp";
+import dolls2 from "@/assets/showcase/toys-2.webp";
+import dolls3 from "@/assets/showcase/toys-3.webp";
 import yr1 from "@/assets/showcase/yrmart-1.webp";
 import yr2 from "@/assets/showcase/yrmart-2.webp";
 import yr3 from "@/assets/showcase/yrmart-3.webp";
@@ -26,15 +26,15 @@ const find = (slug: string) => {
   return project;
 };
 
-const lox = find("lusciouslox");
-const ask = find("ask-electrical");
+const lox = find("salon");
+const ask = find("electrician");
 const yr = find("yr-mart");
-const dolls = find("power-dolls");
+const dolls = find("toys");
 
 /**
  * The screens on the hero's wall of work, in the order they come round.
- * Each is a real page from a live client site (cut from the captures in
- * `src/assets/work/`). Neighbours are always different clients.
+ * Each is a real page from a client site, with anything that names the client blurred out
+ * (see the note in projects.ts). Neighbours are always different clients.
  */
 export const screens: Screen[] = [
   { image: ask1, project: ask },

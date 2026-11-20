@@ -85,7 +85,7 @@ function Devices({
             <motion.div className="will-change-transform" style={still ? undefined : { y: desktopY }}>
               <Image
                 src={project.desktop}
-                alt={`The ${project.name} website on a desktop screen`}
+                alt={`A ${project.name} website on a desktop screen`}
                 quality={90}
                 sizes={SIZES.desktop}
                 className="block h-auto w-full"
@@ -95,25 +95,27 @@ function Devices({
         </div>
 
         {/* Phone */}
-        <div
-          className="absolute -bottom-[7%] -left-[4%] w-[23%] overflow-hidden rounded-[1.1rem] bg-[#0c0c0d] p-[3px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)] md:-left-[7%] md:rounded-[1.75rem] md:p-[5px]"
-          style={{ transform: "translateZ(50px)" }}
-        >
+        {project.mobile ? (
           <div
-            className="relative aspect-[9/18.6] overflow-hidden rounded-[0.9rem] md:rounded-[1.4rem]"
-            style={{ backgroundColor: project.tint.mobile }}
+            className="absolute -bottom-[7%] -left-[4%] w-[23%] overflow-hidden rounded-[1.1rem] bg-[#0c0c0d] p-[3px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)] md:-left-[7%] md:rounded-[1.75rem] md:p-[5px]"
+            style={{ transform: "translateZ(50px)" }}
           >
-            <motion.div className="will-change-transform" style={still ? undefined : { y: mobileY }}>
-              <Image
-                src={project.mobile}
-                alt={`The ${project.name} website on a phone`}
-                quality={90}
-                sizes={SIZES.mobile}
-                className="block h-auto w-full"
-              />
-            </motion.div>
+            <div
+              className="relative aspect-[9/18.6] overflow-hidden rounded-[0.9rem] md:rounded-[1.4rem]"
+              style={{ backgroundColor: project.tint.mobile }}
+            >
+              <motion.div className="will-change-transform" style={still ? undefined : { y: mobileY }}>
+                <Image
+                  src={project.mobile}
+                  alt={`A ${project.name} website on a phone`}
+                  quality={90}
+                  sizes={SIZES.mobile}
+                  className="block h-auto w-full"
+                />
+              </motion.div>
+            </div>
           </div>
-        </div>
+        ) : null}
       </motion.div>
     </div>
   );
@@ -208,29 +210,28 @@ function ProjectCard({
             </ul>
 
             <a
-              href={project.url}
-              target="_blank"
-              rel="noopener"
+              // Named clients link to their live site. The rest lead to the contact form.
+              href={project.url ?? "#contact"}
+              {...(project.url ? { target: "_blank", rel: "noopener" } : {})}
 
               className="group mt-8 inline-flex h-14 w-fit items-center gap-4 whitespace-nowrap rounded-full pl-7 pr-2 text-base font-semibold transition-transform duration-500 ease-[var(--ease-expo)] hover:scale-[1.03]"
               style={{ backgroundColor: theme.fg, color: theme.bg }}
             >
-              Visit the live site
+              {project.url ? "Visit the live site" : "Want one like this?"}
               <span
                 className="grid h-10 w-10 place-items-center rounded-full transition-transform duration-500 ease-[var(--ease-expo)] group-hover:rotate-45"
                 style={{ backgroundColor: theme.bg, color: theme.fg }}
               >
                 {ARROW}
               </span>
-              <span className="sr-only"> for {project.name} (opens in a new tab)</span>
+              {project.url ? <span className="sr-only"> for {project.name} (opens in a new tab)</span> : null}
             </a>
           </div>
 
           {/* The site itself */}
           <a
-            href={project.url}
-            target="_blank"
-            rel="noopener"
+            href={project.url ?? "#contact"}
+            {...(project.url ? { target: "_blank", rel: "noopener" } : {})}
             tabIndex={-1}
             aria-hidden="true"
 
@@ -266,7 +267,7 @@ export function Work() {
           title={"Real businesses.\n*Live* sites."}
           id="work-title"
         >
-          <p>Every project below is live right now. Click through and have a look around.</p>
+          <p>Real sites for real businesses. Some are shown without the client&rsquo;s name.</p>
         </SectionHeading>
       </div>
 

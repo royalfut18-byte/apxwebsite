@@ -1,14 +1,17 @@
 import type { StaticImageData } from "next/image";
 
-import askDesktop from "@/assets/work/askelectrical-desktop.webp";
-import askMobile from "@/assets/work/askelectrical-mobile.webp";
-import loxDesktop from "@/assets/work/lusciouslox-desktop.webp";
-import loxMobile from "@/assets/work/lusciouslox-mobile.webp";
-import dollsDesktop from "@/assets/work/powerdolls-desktop.webp";
-import dollsMobile from "@/assets/work/powerdolls-mobile.webp";
+import electricianDesktop from "@/assets/work/electrician-desktop.webp";
+import salonDesktop from "@/assets/work/salon-desktop.webp";
+import toysDesktop from "@/assets/work/toys-desktop.webp";
 import yrDesktop from "@/assets/work/yrmart-desktop.webp";
 import yrMobile from "@/assets/work/yrmart-mobile.webp";
 
+/**
+ * Client confidentiality: only YR Mart is shown by name, with its address and a link.
+ * The other projects are described by what the business does. Their screenshots have the
+ * business name, logo and phone numbers blurred out, and nothing here (names, links,
+ * file names) says whose they are. Keep it that way when adding work.
+ */
 export type Project = {
   slug: string;
   name: string;
@@ -20,11 +23,13 @@ export type Project = {
   summary: string;
   /** Things you can see on the live site. */
   built: string[];
-  url: string;
+  /** The live site. Left out for clients who are not named. */
+  url?: string;
   /** Shown in the mock browser bar. */
   displayUrl: string;
   desktop: StaticImageData;
-  mobile: StaticImageData;
+  /** Optional phone capture. */
+  mobile?: StaticImageData;
   /** Flat colours shown in the two screens until their captures have loaded. */
   tint: { desktop: string; mobile: string };
   /** Card palette, taken from the client's own brand. */
@@ -42,17 +47,15 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    slug: "lusciouslox",
-    name: "Lusciouslox",
+    slug: "salon",
+    name: "Hair salon",
     sector: "Hair extensions & salon",
-    place: "Neutral Bay, Sydney",
+    place: "Sydney",
     summary:
       "A luxury salon site built around the booking. Services, offers, real transformations and reviews, plus an online shop for wigs and toppers.",
     built: ["Booking-led design", "Online shop", "Gallery & reviews"],
-    url: "https://www.lusciouslox.com.au/",
-    displayUrl: "lusciouslox.com.au",
-    desktop: loxDesktop,
-    mobile: loxMobile,
+    displayUrl: "hair salon · client site",
+    desktop: salonDesktop,
     tint: { desktop: "#ccc4bc", mobile: "#b7aea6" },
     theme: {
       bg: "#f1e8dc",
@@ -63,25 +66,17 @@ export const projects: Project[] = [
     },
   },
   {
-    slug: "ask-electrical",
-    name: "ASK Electrical",
+    slug: "electrician",
+    name: "Electrician",
     sector: "24/7 electricians",
     place: "Sydney",
     summary:
       "A call-first site for an emergency electrician. Fourteen service pages, a no-nonsense emergency flow, real job photos and reviews straight from Google.",
     built: ["Emergency call flow", "14 service pages", "Project gallery"],
-    url: "https://askelectrical-website.vercel.app/",
-    displayUrl: "askelectrical-website.vercel.app",
-    desktop: askDesktop,
-    mobile: askMobile,
+    displayUrl: "electrician · client site",
+    desktop: electricianDesktop,
     tint: { desktop: "#585346", mobile: "#665a48" },
-    theme: {
-      bg: "#f9a132",
-      fg: "#0f0c07",
-      sub: "#4a3410",
-      accent: "#0f0c07",
-      line: "rgba(15, 12, 7, 0.22)",
-    },
+    theme: { bg: "#f9a132", fg: "#0f0c07", sub: "#4a3410", accent: "#0f0c07", line: "rgba(15, 12, 7, 0.22)" },
   },
   {
     slug: "yr-mart",
@@ -105,16 +100,14 @@ export const projects: Project[] = [
     },
   },
   {
-    slug: "power-dolls",
-    name: "Power Dolls",
+    slug: "toys",
+    name: "Toy brand",
     sector: "Plush companions for kids",
     summary:
       "A colourful brand site for dolls with a purpose. Six characters, each with its own little world, and a give-back story running through it.",
     built: ["Brand storytelling", "Six character worlds", "Giving-back story"],
-    url: "https://powerdollswebsite.vercel.app/",
-    displayUrl: "powerdollswebsite.vercel.app",
-    desktop: dollsDesktop,
-    mobile: dollsMobile,
+    displayUrl: "toy brand · client site",
+    desktop: toysDesktop,
     tint: { desktop: "#dad3cd", mobile: "#ece5e0" },
     theme: {
       bg: "#ffd9e4",
