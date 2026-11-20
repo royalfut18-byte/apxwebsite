@@ -1,7 +1,6 @@
 import type { StaticImageData } from "next/image";
 
 import ask1 from "@/assets/showcase/electrician-1.webp";
-import ask2 from "@/assets/showcase/electrician-2.webp";
 import ask3 from "@/assets/showcase/electrician-3.webp";
 import lox1 from "@/assets/showcase/salon-1.webp";
 import lox2 from "@/assets/showcase/salon-2.webp";
@@ -12,6 +11,7 @@ import dolls3 from "@/assets/showcase/toys-3.webp";
 import yr1 from "@/assets/showcase/yrmart-1.webp";
 import yr2 from "@/assets/showcase/yrmart-2.webp";
 import yr3 from "@/assets/showcase/yrmart-3.webp";
+import yr4 from "@/assets/showcase/yrmart-4.webp";
 
 import { projects, type Project } from "./projects";
 
@@ -43,9 +43,9 @@ export const screens: Screen[] = [
   { image: yr1, project: yr },
   { image: ask3, project: ask },
   { image: lox2, project: lox },
+  { image: yr4, project: yr },
   { image: dolls3, project: dolls },
   { image: yr2, project: yr },
-  { image: ask2, project: ask },
   { image: lox3, project: lox },
   { image: dolls2, project: dolls },
   { image: yr3, project: yr },
