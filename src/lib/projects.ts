@@ -87,7 +87,7 @@ export const projects: Project[] = [
       "A walk-in repair shop on Military Road. Live open-or-closed status, ten services with turnaround times, and straight answers before you walk in.",
     built: ["Live opening status", "10 repair services", "Reviews & FAQ"],
     url: "https://www.yrmartmobilerepairs.com.au/",
-    displayUrl: "yrmartmobilerepairs.com.au",
+    displayUrl: "phone repair · client site",
     desktop: yrDesktop,
     mobile: yrMobile,
     tint: { desktop: "#d9d6d4", mobile: "#dcdad8" },
