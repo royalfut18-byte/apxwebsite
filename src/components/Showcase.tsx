@@ -1,9 +1,11 @@
 "use client";
 
+import { motion, useMotionValue, useTransform, type MotionValue } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { scrollToProject } from "@/lib/scroll";
 import { screens } from "@/lib/showcase";
 
 /** One full turn at rest, in milliseconds. Must match `wall-turn` in globals.css. */
@@ -30,7 +32,8 @@ type Control = { push: (degPerMs: number) => void; setTurning: (on: boolean) => 
 
 /**
  * The hero's wall of work: real pages from live client sites, standing in a ring that
- * turns slowly. Drag it to spin it, scroll and it picks up speed, and the caption names
+ * turns slowly. Drag it to spin it, scroll and it picks up speed, click a screen to bring
+ * it round to the front (and the front one to see that project), and the caption names
  * the client facing you.
  *
  * It is built from ordinary elements placed in 3D with CSS, so the browser's compositor
@@ -41,7 +44,21 @@ type Control = { push: (degPerMs: number) => void; setTurning: (on: boolean) => 
  *    eased animation on a wrapper around the ring, started once and left to the browser.
  *  - Dragging sets that wrapper's angle directly, once per pointer event.
  */
-export function Showcase({ show, paused = false }: { show: boolean; paused?: boolean }) {
+type ShowcaseProps = {
+  /** The screens rise into place when this turns true. */
+  show: boolean;
+  /** Stop turning (the hero is covered by the page). */
+  paused?: boolean;
+  /**
+   * How much whatever contains the wall has scaled it up, if anything. The caption is
+   * scaled back down by the same amount, so it stays the size it was designed at.
+   */
+  zoom?: MotionValue<number>;
+};
+
+export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
+  const unscaled = useMotionValue(1);
+  const captionScale = useTransform(zoom ?? unscaled, (v) => 1 / (v || 1));
   const stage = useRef<HTMLDivElement>(null);
   const spinner = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLDivElement>(null);
@@ -136,17 +153,42 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
     };
 
     // Dragging turns it by hand.
+    // (The wall may be drawn larger than it is laid out, in the hero's showcase: `getBoundingClientRect`
+    // gives the size on screen, which is what a finger or mouse is moving across.)
     const degPerPx = () => {
       const width = host.querySelector<HTMLElement>(".wall-screen")?.offsetWidth || 320;
-      return 180 / (Math.PI * width * SPREAD);
+      const zoom = host.getBoundingClientRect().width / (host.offsetWidth || 1) || 1;
+      return 180 / (Math.PI * width * zoom * SPREAD);
     };
-    let drag: { id: number; x: number; angle: number; lastX: number; lastT: number; v: number } | null = null;
+    const totalAngle = () =>
+      -(((Number(turn.currentTime) || 0) % TURN_MS) / TURN_MS) * 360 + angleAt(performance.now());
+    let drag: {
+      id: number;
+      x: number;
+      y: number;
+      angle: number;
+      lastX: number;
+      lastT: number;
+      v: number;
+      began: number;
+      moved: number;
+    } | null = null;
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const now = performance.now();
       const angle = angleAt(now);
       hold(angle);
-      drag = { id: e.pointerId, x: e.clientX, angle, lastX: e.clientX, lastT: now, v: 0 };
+      drag = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        angle,
+        lastX: e.clientX,
+        lastT: now,
+        v: 0,
+        began: now,
+        moved: 0,
+      };
       dragging = true;
       steady();
       host.setPointerCapture(e.pointerId);
@@ -156,6 +198,7 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
       if (!drag || e.pointerId !== drag.id) return;
       const now = performance.now();
       hold(drag.angle + (e.clientX - drag.x) * degPerPx());
+      drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.x, e.clientY - drag.y));
       const dt = Math.max(1, now - drag.lastT);
       drag.v = drag.v * 0.6 + ((e.clientX - drag.lastX) / dt) * 0.4;
       drag.lastX = e.clientX;
@@ -163,12 +206,28 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
     };
     const onUp = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return;
+      const now = performance.now();
+      const click = e.type === "pointerup" && drag.moved < 6 && now - drag.began < 500;
       // Let go while moving and it keeps going, then coasts to a stop.
-      const flick = performance.now() - drag.lastT < 80 ? drag.v * degPerPx() : 0;
+      const flick = now - drag.lastT < 80 ? drag.v * degPerPx() : 0;
       drag = null;
       dragging = false;
       delete host.dataset.dragging;
-      if (Math.abs(flick) > 0.01) push(flick);
+      if (click) {
+        // A click on a screen brings it round to face the visitor. A click on the one
+        // already facing them goes to that project.
+        const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>(".wall-screen");
+        const index = hit ? Number(hit.dataset.index) : NaN;
+        if (!Number.isNaN(index)) {
+          let away = (index * STEP + totalAngle()) % 360;
+          if (away > 180) away -= 360;
+          if (away < -180) away += 360;
+          if (Math.abs(away) > STEP * 0.42) push(-away / TAU);
+          else scrollToProject(screens[index].project.slug);
+        }
+      } else if (Math.abs(flick) > 0.01) {
+        push(flick);
+      }
       steady();
     };
 
@@ -203,9 +262,7 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
     // Which screen is facing the visitor, for the caption.
     const watch = window.setInterval(() => {
       if (!onScreen || covered) return;
-      const steadyDeg = -(((Number(turn.currentTime) || 0) % TURN_MS) / TURN_MS) * 360;
-      const total = steadyDeg + angleAt(performance.now());
-      const index = ((Math.round(-total / STEP) % COUNT) + COUNT) % COUNT;
+      const index = ((Math.round(-totalAngle() / STEP) % COUNT) + COUNT) % COUNT;
       setFront((was) => (was === index ? was : index));
     }, 250);
 
@@ -249,9 +306,10 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
   const { project } = screens[front];
 
   return (
-    <div aria-hidden="true" className="relative">
+    <div className="relative">
       <div
         ref={stage}
+        aria-hidden="true"
         className="wall"
         data-show={show ? "" : undefined}
         data-cursor="label"
@@ -263,6 +321,7 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
             {screens.map((screen, i) => (
               <div
                 key={i}
+                data-index={i}
                 className="wall-screen"
                 style={{ transform: `rotateY(${i * STEP}deg) translateZ(var(--r))` }}
               >
@@ -281,8 +340,12 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
                   <Image
                     src={screen.image}
                     alt=""
-                    sizes="(min-width: 768px) 28vw, 44vw"
+                    // A little larger than it rests at, for when the showcase enlarges the wall.
+                    sizes="(min-width: 768px) 34vw, 44vw"
                     loading={i < 2 || i === COUNT - 1 ? "eager" : "lazy"}
+                    // They sit behind the intro for its first few seconds: let the scripts and
+                    // fonts that the intro needs have the connection first.
+                    fetchPriority="low"
                     draggable={false}
                     className="block h-auto w-full"
                   />
@@ -293,12 +356,33 @@ export function Showcase({ show, paused = false }: { show: boolean; paused?: boo
         </div>
       </div>
 
-      <p key={project.slug} className="wall-caption label">
+      {/* Names the client facing the visitor, and takes them to that project. */}
+      <motion.a
+        href="#work"
+        onClick={(e) => {
+          e.preventDefault();
+          scrollToProject(project.slug);
+        }}
+        data-cursor="hover"
+        className="wall-caption label group"
+        style={{ scale: captionScale }}
+      >
         <span className="pulse-dot block h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
-        <span className="shrink-0 whitespace-nowrap text-bone">{project.name}</span>
-        <span className="text-faint">/</span>
-        <span className="truncate text-bone-dim">{project.sector}</span>
-      </p>
+        <span key={project.slug} className="wall-caption-text">
+          <span className="shrink-0 whitespace-nowrap text-bone">{project.name}</span>
+          <span className="text-faint">/</span>
+          <span className="truncate text-bone-dim">{project.sector}</span>
+        </span>
+        <svg
+          viewBox="0 0 12 12"
+          className="h-2.5 w-2.5 shrink-0 text-mute transition-transform duration-500 ease-[var(--ease-expo)] group-hover:translate-y-0.5 group-hover:text-bone"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="M6 1v10M1.5 6.5 6 11l4.5-4.5" stroke="currentColor" strokeWidth="1.4" />
+        </svg>
+        <span className="sr-only">: see this project</span>
+      </motion.a>
     </div>
   );
 }

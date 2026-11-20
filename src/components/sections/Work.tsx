@@ -155,6 +155,8 @@ function ProjectCard({
   return (
     <div
       ref={ref}
+      // Lets the hero's wall of work send a visitor straight to this project.
+      data-project={project.slug}
       className="pointer-events-none px-3 pb-5 md:px-6 md:pb-8 lg:sticky lg:top-0 lg:flex lg:h-screen lg:items-center lg:pb-0 lg:pt-20 xl:px-14"
     >
       <motion.article

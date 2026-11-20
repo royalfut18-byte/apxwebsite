@@ -3,6 +3,7 @@
 import { motion, useInView, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
+import { useTilt } from "@/hooks/useTilt";
 import { cn } from "@/lib/cn";
 import { scrollToTarget } from "@/lib/scroll";
 import { services, type ServiceKey } from "@/lib/site";
@@ -41,6 +42,8 @@ function Stage({ service }: { service: (typeof services)[number] }) {
   // The demo is only created once its stage is close to the screen. Until then (and in
   // whichever of the two layouts is not showing) the stage is an empty frame.
   const near = useInView(stage, { once: true, margin: "600px 0px" });
+  // It leans toward the mouse, like something you could pick up.
+  const tilt = useTilt(stage, 4);
 
   useEffect(() => {
     const el = stage.current;
@@ -55,7 +58,8 @@ function Stage({ service }: { service: (typeof services)[number] }) {
   return (
     <div
       ref={stage}
-      className="relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(36rem,74vh)]"
+      {...tilt}
+      className="tilt relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(36rem,74vh)]"
     >
       {/* Survey-map dots that fade toward the edges, and a low ember glow. All three are
           plain gradients: no masks or blur filters for the browser to work out. */}
@@ -79,6 +83,7 @@ function Stage({ service }: { service: (typeof services)[number] }) {
         {/* Laid out smaller by the same factor it is scaled by, so it exactly fills the stage. */}
         <motion.div style={{ scale, width: inverse, height: inverse }}>{near && <Demo />}</motion.div>
       </div>
+      <span aria-hidden="true" className="tilt-glare" />
     </div>
   );
 }

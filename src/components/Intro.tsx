@@ -11,8 +11,8 @@ import { useIntro } from "./providers/IntroProvider";
 /**
  * The opening sequence.
  *
- * Four words (what APX does) flick past while a counter climbs, the wordmark draws
- * itself, then two curtains lift: ink first, with a band of colour behind it. The
+ * Four words (what APX does) roll past in 3D, like the faces of a drum, while a counter
+ * climbs, the wordmark draws itself, then two curtains lift: ink first, with a band of colour behind it. The
  * wordmark does not fade out. It flies up into the header and becomes the
  * logo (it shares a `layoutId` with the one in <Nav />).
  *
@@ -38,9 +38,16 @@ const HOLD_MS = 240;
 const FONT_WAIT_MS = 500;
 const LIFT_S = 1;
 
-const UP = "translateY(-105%)";
+// The curtains.
 const REST = "translateY(0%)";
-const BELOW = "translateY(105%)";
+
+// The words are faces of a drum that turns away from the visitor: each one rolls up from
+// underneath, faces them, and rolls on over the top. `DEPTH` is how far a face sits from
+// the drum's axis. Written as one transform so the browser's compositor can run it.
+const DEPTH = "0.6em";
+const face = (deg: number) =>
+  `perspective(900px) translateZ(-${DEPTH}) rotateX(${deg}deg) translateZ(${DEPTH})`;
+const FACE = { below: face(-90), front: face(0), above: face(90) };
 
 /** One of the two curtains. Its lower edge hangs in a curve that flattens as it lifts. */
 function Sheet({
@@ -165,17 +172,21 @@ export function Intro() {
 
                 {/* The four words */}
                 <div className="absolute inset-0 grid place-items-center" aria-hidden="true">
-                  <div className="display relative h-[1.15em] w-full overflow-hidden text-center text-[clamp(2.75rem,9vw,7.5rem)]">
+                  <div className="display relative h-[1.15em] w-full text-center text-[clamp(2.75rem,9vw,7.5rem)]">
                     <AnimatePresence initial={false} mode={reduced ? "wait" : "sync"}>
                       {word && (
                         <motion.span
                           key={word}
-                          className="intro-word absolute inset-x-0 top-0 block leading-[1.15]"
-                          initial={reduced ? { opacity: 0 } : { transform: BELOW }}
-                          animate={reduced ? { opacity: 1 } : { transform: REST }}
-                          exit={reduced ? { opacity: 0, transition: { duration: 0.12 } } : { transform: UP }}
+                          className="intro-word absolute inset-x-0 top-0 block leading-[1.15] [backface-visibility:hidden]"
+                          initial={reduced ? { opacity: 0 } : { transform: FACE.below }}
+                          animate={reduced ? { opacity: 1 } : { transform: FACE.front }}
+                          exit={
+                            reduced
+                              ? { opacity: 0, transition: { duration: 0.12 } }
+                              : { transform: FACE.above }
+                          }
                           transition={
-                            reduced ? { duration: 0.2, ease: "easeOut" } : { duration: 0.45, ease: ease.expo }
+                            reduced ? { duration: 0.2, ease: "easeOut" } : { duration: 0.5, ease: ease.expo }
                           }
                         >
                           {word}

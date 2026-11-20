@@ -30,6 +30,11 @@ type AuroraProps = {
   reach?: [number, number];
   /** Overall strength, 0..1. */
   gain?: number;
+  /**
+   * Moves the focus without re-rendering: called on every frame, returns an offset in the
+   * same units as `focus`. The light eases toward it, so it can follow a pointer or a scroll.
+   */
+  shift?: () => [number, number];
   /** Hold off drawing until true (the hero waits for the intro this way). */
   active?: boolean;
 };
@@ -146,16 +151,17 @@ export function Aurora({
   focus = [0.5, 0.5],
   reach = [0.7, 0.7],
   gain = 1,
+  shift,
   active = true,
 }: AuroraProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [live, setLive] = useState(false);
 
   // Latest props for the loop, and a way to restart it, without rebuilding the scene.
-  const latest = useRef({ active, focus, reach, gain });
+  const latest = useRef({ active, focus, reach, gain, shift });
   const wake = useRef<(() => void) | null>(null);
   useEffect(() => {
-    latest.current = { active, focus, reach, gain };
+    latest.current = { active, focus, reach, gain, shift };
     if (active) wake.current?.();
   });
 
@@ -231,6 +237,9 @@ export function Aurora({
       visible: false,
       drawn: false,
       lost: false,
+      // where the focus has drifted to (see `shift`)
+      dx: 0,
+      dy: 0,
     };
 
     function resize() {
@@ -251,7 +260,10 @@ export function Aurora({
       const now = latest.current;
       gl!.uniform2f(uRes, canvas!.width, canvas!.height);
       gl!.uniform1f(uTime, state.time);
-      gl!.uniform2f(uFocus, now.focus[0], now.focus[1]);
+      const [tx, ty] = now.shift ? now.shift() : [0, 0];
+      state.dx += (tx - state.dx) * 0.09;
+      state.dy += (ty - state.dy) * 0.09;
+      gl!.uniform2f(uFocus, now.focus[0] + state.dx, now.focus[1] + state.dy);
       gl!.uniform2f(uReach, now.reach[0], now.reach[1]);
       gl!.uniform1f(uGain, now.gain);
       gl!.clear(gl!.COLOR_BUFFER_BIT);

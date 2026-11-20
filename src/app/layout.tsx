@@ -131,7 +131,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         {/* Without scripts there is no intro and nothing animates in, so show everything as-is. */}
         <noscript>
-          <style>{`.intro-root,.wall-caption{display:none!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}`}</style>
+          <style>{`.intro-root,.wall-caption{display:none!important}:root{--hero-screens:2!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}`}</style>
         </noscript>
 
         <a

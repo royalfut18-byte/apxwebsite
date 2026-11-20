@@ -174,57 +174,72 @@ html.is-locked body {
   }
 
   /*
-   * The hero is pinned for one screen of scrolling while the rest of the page slides
-   * over it: a track two screens tall, a sticky frame one screen tall, and the next
-   * block pulled up by a screen. (vh first, for browsers without the svh unit.)
+   * The hero is pinned while the page scrolls: a tall track, a sticky frame one screen
+   * tall inside it, and the next block pulled up by a screen so that it slides over the
+   * frame at the end. The track is three screens tall: one screen of scrolling for the
+   * showcase (see Hero.tsx), one for the page to slide over.
+   *
+   * --hero-screen is what "one screen" means. On larger screens it is the small viewport
+   * (svh), so the hero always fits. On phones it is plain vh, which there means the screen
+   * with the browser's bars tucked away: that is the screen the visitor has for the whole
+   * of the showcase, since the bars go as soon as they scroll.
    */
+  :root {
+    --hero-screen: 100vh;
+    --hero-screens: 3;
+  }
+  @supports (height: 1svh) {
+    @media (min-width: 768px) {
+      :root {
+        --hero-screen: 100svh;
+      }
+    }
+  }
   .hero-track {
-    height: 200vh;
-    height: 200svh;
+    height: calc(var(--hero-screens) * var(--hero-screen));
   }
   .hero-frame {
     position: sticky;
     top: 0;
-    height: 100vh;
-    height: 100svh;
+    height: var(--hero-screen);
     overflow: hidden;
   }
   .hero-follow {
-    margin-top: -100vh;
-    margin-top: -100svh;
+    margin-top: calc(var(--hero-screen) * -1);
   }
   /* Inside the frame: the copy on top, and the wall of work in whatever height is left. */
   .hero-stage {
     position: relative;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    min-height: 100svh;
+    min-height: var(--hero-screen);
   }
   .hero-wall {
     position: relative;
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
-    justify-content: center;
+    /* In the middle of the space it has. If there is not enough (a small phone), it starts
+       at the top instead and runs off the bottom of the screen until the showcase lifts it. */
+    justify-content: flex-start;
+    justify-content: safe center;
     min-height: 0;
     /* Lets the wall size itself from the height it has been given (the cqh unit below). */
     container-type: size;
   }
 
   /*
-   * On phones, and on very short screens, the hero does not pin. It simply flows, as tall
-   * as its content needs, so nothing can ever be squeezed or cut off.
+   * On very short screens (a phone on its side) the hero does not pin. It simply flows, as
+   * tall as its content needs, so nothing can ever be squeezed or cut off.
    */
-  @media (max-width: 767px), (max-height: 600px) {
+  @media (max-height: 600px) {
     .hero-track {
       height: auto;
     }
     .hero-frame {
       position: relative;
       height: auto;
-      min-height: 100vh;
-      min-height: 100svh;
+      min-height: var(--hero-screen);
     }
     .hero-follow {
       margin-top: 0;
@@ -426,7 +441,46 @@ html.is-locked body {
     border: 1px solid rgb(255 255 255 / 0.12);
     border-radius: 9999px;
     background: rgb(11 11 13 / 0.88);
+    /* (Scaled back down by Showcase.tsx when the hero enlarges the wall.) */
+    transform-origin: 50% 0;
+    transition: border-color 0.3s;
+  }
+  .wall-caption:hover {
+    border-color: rgb(255 255 255 / 0.3);
+  }
+  /* The name changes as the wall turns: each new one slides up into place. */
+  .wall-caption-text {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
     animation: wall-caption 0.6s var(--ease-expo) both;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Tilt: a card that leans toward the mouse (see useTilt.ts).
+     --------------------------------------------------------------------------- */
+  .tilt {
+    transform: perspective(1100px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform 0.7s var(--ease-quart);
+  }
+  .tilt-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      34rem circle at var(--glare-x, 50%) var(--glare-y, 0%),
+      rgb(255 255 255 / 0.075),
+      rgb(255 255 255 / 0) 55%
+    );
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .tilt:hover .tilt-glare {
+      opacity: 1;
+    }
   }
 
   /* Film grain over the glows: hides the banding that soft gradients show on dark screens. */
@@ -555,6 +609,14 @@ html.intro-live .intro-root {
   animation: none;
 }
 
+/* Reduced motion: there is no showcase, so the hero is pinned only for as long as the
+   page takes to slide over it. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hero-screens: 2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -564,8 +626,11 @@ html.intro-live .intro-root {
   .caret,
   .scroll-hint,
   .pulse-dot::after,
-  .wall-caption {
+  .wall-caption-text {
     animation: none;
+  }
+  .tilt {
+    transform: none;
   }
   /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
   .wall-ring {

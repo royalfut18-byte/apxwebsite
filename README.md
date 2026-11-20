@@ -95,19 +95,26 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 - **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4** and **Framer Motion**.
   Scrolling is the browser's own; nothing sits between the visitor and the page.
 - `src/components/Intro.tsx`: the opening sequence, played in full on every visit to the
-  home page. The curtain is part of the page's HTML, so it is on screen from the first
+  home page: four words rolling past in 3D, the wordmark drawing itself, then two curtains
+  lifting. The curtain is part of the page's HTML, so it is on screen from the first
   paint, before any script has loaded. The wordmark shares a `layoutId` with the header
   logo, which is how it flies into place.
 - `src/components/Showcase.tsx`: the hero's wall of work. Ordinary images placed in a ring
   with CSS 3D, turned by a single CSS animation, so the graphics card does all of it and
-  it works before (or without) JavaScript. Script only changes the animation's speed or
-  position: when it is dragged, when the page scrolls, and for the spin it arrives with.
+  it works before (or without) JavaScript. Everything on top of the steady turn (the spin
+  it arrives with, a flick, a scroll, a click that brings a screen round to the front) is
+  one eased animation handed to the browser, so no script runs per frame.
+- `src/components/sections/Hero.tsx`: pins the hero while the page scrolls and runs the
+  showcase: over the first screen of scrolling the copy clears and the wall rises to the
+  middle of the screen and grows, over the second the page slides up over it. The layout
+  side of this is in `globals.css` under `.hero-track`.
 - `src/components/Aurora.tsx`: the glow behind the hero, the contact form and the 404 page.
   A small shader drawn at a fraction of its displayed size (soft light has no detail to
   lose) at 30 frames a second, paused whenever it is off screen. Where there is no WebGL,
   or no graphics acceleration, a still CSS gradient in the same colours shows instead.
 - `src/components/demos/`: the four small service animations. Each is only created when
-  its stage is about to scroll into view, and only runs while it is on screen.
+  its stage is about to scroll into view, and only runs while it is on screen. The stages
+  they sit on lean toward the mouse (`src/hooks/useTilt.ts`).
 - `src/components/sections/`: one file per section of the page.
 
 ### Keeping it fast
@@ -131,9 +138,9 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
 - **Accessibility**: real headings and landmarks, visible focus styles, a skip link, labelled
   form fields with inline errors, and support for the device's "reduce motion" setting.
   With it on, nothing travels across the screen: the intro and the headlines fade instead
-  of sliding, the wall of work stands still (it can still be turned by hand), the glow
-  holds one frame, the marquee stops and the demos show their finished state. If the site
-  looks static on your own device, check that setting first.
+  of sliding, the wall of work stands still (it can still be turned by hand) and there is
+  no scroll showcase, the glow holds one frame, the marquee stops and the demos show their
+  finished state. If the site looks static on your own device, check that setting first.
 - **Without JavaScript** the page still shows all of its content.
 - **SEO**: metadata, Open Graph image, structured data (`ProfessionalService`), sitemap,
   robots and a web manifest are generated from `src/lib/site.ts`.
