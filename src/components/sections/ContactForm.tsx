@@ -81,7 +81,6 @@ function Field({
         <textarea
           {...shared}
           rows={4}
-          data-lenis-prevent
           className={cn(shared.className, "resize-none leading-relaxed")}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -200,7 +199,7 @@ export function ContactForm() {
   const firstName = enquiry.name.trim().split(/\s+/)[0];
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink-800/80 p-6 backdrop-blur-xl md:rounded-[2.25rem] md:p-10 lg:p-12">
+    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink-800/95 p-6 md:rounded-[2.25rem] md:p-10 lg:p-12">
       <AnimatePresence mode="wait" initial={false}>
         {finished ? (
           <motion.div

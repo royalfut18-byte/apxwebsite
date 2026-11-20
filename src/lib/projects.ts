@@ -25,6 +25,8 @@ export type Project = {
   displayUrl: string;
   desktop: StaticImageData;
   mobile: StaticImageData;
+  /** Flat colours shown in the two screens until their captures have loaded. */
+  tint: { desktop: string; mobile: string };
   /** Card palette, taken from the client's own brand. */
   theme: {
     bg: string;
@@ -51,6 +53,7 @@ export const projects: Project[] = [
     displayUrl: "lusciouslox.com.au",
     desktop: loxDesktop,
     mobile: loxMobile,
+    tint: { desktop: "#ccc4bc", mobile: "#b7aea6" },
     theme: {
       bg: "#f1e8dc",
       fg: "#1c1210",
@@ -71,6 +74,7 @@ export const projects: Project[] = [
     displayUrl: "askelectrical-website.vercel.app",
     desktop: askDesktop,
     mobile: askMobile,
+    tint: { desktop: "#585346", mobile: "#665a48" },
     theme: {
       bg: "#f9a132",
       fg: "#0f0c07",
@@ -91,6 +95,7 @@ export const projects: Project[] = [
     displayUrl: "yrmartmobilerepairs.com.au",
     desktop: yrDesktop,
     mobile: yrMobile,
+    tint: { desktop: "#d9d6d4", mobile: "#dcdad8" },
     theme: {
       bg: "#2b60e2",
       fg: "#ffffff",
@@ -110,6 +115,7 @@ export const projects: Project[] = [
     displayUrl: "powerdollswebsite.vercel.app",
     desktop: dollsDesktop,
     mobile: dollsMobile,
+    tint: { desktop: "#dad3cd", mobile: "#ece5e0" },
     theme: {
       bg: "#ffd9e4",
       fg: "#201a25",

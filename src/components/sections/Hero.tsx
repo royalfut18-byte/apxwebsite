@@ -39,8 +39,6 @@ export function Hero() {
 
   const contentY = useTransform(journey, [0, 1], ["0%", "-22%"]);
   const contentOpacity = useTransform(journey, [0, 0.5], [1, 0]);
-  const frameScale = useTransform(journey, [0, 1], [1, 0.93]);
-  const frameRadius = useTransform(journey, [0, 0.25], [0, 32]);
   const glowOpacity = useTransform(journey, [0, 0.9], [1, 0.25]);
 
   // The mountain fades up once the curtain lifts, then dims as the camera climbs away.
@@ -70,12 +68,13 @@ export function Hero() {
   return (
     <section ref={track} id="top" className="hero-track relative" aria-label="Introduction">
       <div className="hero-frame">
-        <motion.div
-          className="relative h-full w-full overflow-hidden bg-ink"
-          style={reduced || unpinned ? undefined : { scale: frameScale, borderRadius: frameRadius }}
-        >
+        <div className="relative h-full w-full overflow-hidden bg-ink">
           {/* First light behind the summit */}
-          <motion.div aria-hidden="true" className="absolute inset-0" style={{ opacity: glowOpacity }}>
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-0 will-change-[opacity]"
+            style={{ opacity: glowOpacity }}
+          >
             <motion.div
               data-reveal=""
               className="absolute inset-0 bg-[radial-gradient(58%_52%_at_50%_34%,rgba(255,91,46,0.34)_0%,rgba(255,91,46,0.11)_38%,rgba(255,91,46,0)_72%)] md:bg-[radial-gradient(44%_58%_at_75%_36%,rgba(255,91,46,0.36)_0%,rgba(255,91,46,0.12)_38%,rgba(255,91,46,0)_72%)]"
@@ -135,8 +134,10 @@ export function Hero() {
             className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,var(--color-ink)_4%,rgba(7,7,8,0.9)_34%,rgba(7,7,8,0.58)_52%,rgba(7,7,8,0)_74%)] md:bg-[linear-gradient(72deg,var(--color-ink)_6%,rgba(7,7,8,0.78)_30%,rgba(7,7,8,0)_58%)]"
           />
 
+          {/* The copy drifts up and fades as the page slides over. It gets its own layer
+              (will-change) so that is done by the graphics card, not by redrawing the text. */}
           <motion.div
-            className="shell relative z-10 flex h-full flex-col justify-end pb-5 pt-24 md:pb-7"
+            className="shell relative z-10 flex h-full flex-col justify-end pb-5 pt-24 will-change-[transform,opacity] md:pb-7"
             style={reduced ? { opacity: contentOpacity } : { y: contentY, opacity: contentOpacity }}
           >
             <Reveal wipe show={ready} delay={0.2} y={16} className="mb-5 flex items-center gap-3 md:mb-7">
@@ -187,11 +188,7 @@ export function Hero() {
                 className="label group flex items-center gap-3 text-mute transition-colors hover:text-bone"
               >
                 <span className="relative block h-7 w-px overflow-hidden bg-white/15">
-                  <motion.span
-                    className="absolute inset-x-0 top-0 block h-3 bg-ember"
-                    animate={{ y: ["-100%", "260%"] }}
-                    transition={{ duration: 1.9, ease: ease.inOut, repeat: Infinity, repeatDelay: 0.35 }}
-                  />
+                  <span className="scroll-hint absolute inset-x-0 top-0 block h-3 bg-ember" />
                 </span>
                 Scroll
               </a>
@@ -211,7 +208,7 @@ export function Hero() {
               </p>
             </Reveal>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

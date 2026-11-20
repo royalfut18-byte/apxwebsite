@@ -8,7 +8,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { nav, site, SUMMIT_METRES } from "@/lib/site";
 
 import { Logo } from "../Logo";
-import { scrollToTarget } from "../providers/SmoothScroll";
+import { scrollToTarget } from "@/lib/scroll";
 import { LocalTime } from "../ui/LocalTime";
 
 // The year the site was built: what the server renders before the browser knows today's date.
@@ -93,8 +93,8 @@ export function Footer() {
         {/* The wordmark, as big as the page allows. It draws itself on arrival. */}
         <motion.div
           ref={markRef}
-          className="mt-16 text-bone md:mt-24"
-          style={reduced ? undefined : { y: markY }}
+          className="mt-16 text-bone will-change-transform md:mt-24"
+          style={{ y: reduced ? 0 : markY }}
         >
           <Logo draw play={markSeen} className="block h-auto w-full" title={site.name} />
         </motion.div>

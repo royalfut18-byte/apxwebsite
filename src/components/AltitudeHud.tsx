@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 import { ease } from "@/lib/cn";
@@ -9,22 +9,30 @@ import { SUMMIT_METRES } from "@/lib/site";
 import { useIntro } from "./providers/IntroProvider";
 
 const TICKS = Array.from({ length: 21 }, (_, i) => i);
+/** Height of the rail, in pixels (matches the h-48 class below). */
+const RAIL = 192;
 
 /**
  * Scroll progress, told as a climb. The marker starts at the foot of the rail and
  * rises as you move down the page, reading out the altitude on the way to
  * 2,228 m, the top of mainland Australia.
  *
- * Lives in the page gutter on wide screens only, and is purely decorative.
+ * Lives in the page gutter on wide screens only, and is purely decorative. It moves
+ * with transforms alone, so following the scroll never forces the page to re-lay out.
  */
 export function AltitudeHud() {
   const { ready } = useIntro();
   const home = usePathname() === "/";
   const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 32, restDelta: 0.0004 });
-  const clamped = useTransform(progress, (v) => Math.min(1, Math.max(0, v)));
-  const top = useTransform(clamped, (v) => `${(1 - v) * 100}%`);
-  const metres = useTransform(clamped, (v) => `${Math.round(v * SUMMIT_METRES).toLocaleString("en-AU")} m`);
+  const clamped = useTransform(scrollYProgress, (v) => Math.min(1, Math.max(0, v)));
+  const marker = useTransform(clamped, (v) => `translateY(${((1 - v) * RAIL).toFixed(1)}px)`);
+  const fill = useTransform(clamped, (v) => `scaleY(${v.toFixed(4)})`);
+  // Rounded to the nearest 5 m (and exact at the summit), so the label is rewritten far
+  // less often than the page scrolls.
+  const label = useTransform(clamped, (v) => {
+    const metres = v > 0.999 ? SUMMIT_METRES : Math.round((v * SUMMIT_METRES) / 5) * 5;
+    return `${metres.toLocaleString("en-AU")} m`;
+  });
 
   // It measures the climb down the home page; anywhere else it has nothing to say.
   if (!home) return null;
@@ -60,13 +68,13 @@ export function AltitudeHud() {
         {/* Distance climbed */}
         <motion.div
           className="absolute bottom-0 right-0 h-full w-px origin-bottom bg-white"
-          style={{ scaleY: clamped }}
+          style={{ transform: fill }}
         />
         {/* Marker and readout */}
-        <motion.div className="absolute right-0" style={{ top }}>
+        <motion.div className="absolute right-0 top-0" style={{ transform: marker }}>
           <span className="absolute -right-[3px] -top-[3.5px] block h-[7px] w-[7px] rounded-full bg-white" />
-          <motion.span className="label absolute right-[17px] top-0 block origin-center -translate-y-1/2 whitespace-nowrap tabular-nums text-white [writing-mode:vertical-rl] [transform:translateY(-50%)_rotate(180deg)]">
-            {metres}
+          <motion.span className="label absolute right-[17px] top-0 block origin-center whitespace-nowrap tabular-nums text-white [transform:translateY(-50%)_rotate(180deg)] [writing-mode:vertical-rl]">
+            {label}
           </motion.span>
         </motion.div>
       </div>

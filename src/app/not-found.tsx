@@ -30,7 +30,7 @@ export default function NotFound() {
       </svg>
       <div
         aria-hidden="true"
-        className="absolute right-[10%] top-1/2 h-[26rem] w-[26rem] -translate-y-1/2 rounded-full bg-ember/20 blur-[120px]"
+        className="absolute right-[calc(10%-12rem)] top-1/2 h-[50rem] w-[50rem] -translate-y-1/2 bg-[radial-gradient(closest-side,rgba(255,91,46,0.155),rgba(255,91,46,0.13)_30%,rgba(255,91,46,0.075)_55%,rgba(255,91,46,0.03)_80%,transparent)]"
       />
 
       <div className="shell relative">

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Fragment } from "react";
 
 import { cn, ease } from "@/lib/cn";
@@ -29,9 +29,26 @@ type RevealTextProps = {
   id?: string;
 };
 
-const word: Variants = {
-  hidden: { y: "108%", rotate: 4 },
-  shown: { y: "0%", rotate: 0, transition: { duration: 1, ease: ease.expo } },
+// Each word is animated as a single `transform`, which the browser runs on its
+// compositor: the reveal stays smooth even while the page is busy.
+const rise: Variants = {
+  hidden: { transform: "translateY(108%) rotate(4deg)" },
+  shown: {
+    transform: "translateY(0%) rotate(0deg)",
+    transition: { duration: 1, ease: ease.expo },
+  },
+};
+
+// Reduced motion: no travel, just a fade. `transform` is still named, and set to "none",
+// because the HTML sent by the server carries the starting position of the version above
+// and something has to take it off again.
+const fade: Variants = {
+  hidden: { opacity: 0, transform: "none" },
+  shown: {
+    opacity: 1,
+    transform: "none",
+    transition: { duration: 0.6, ease: "easeOut", transform: { duration: 0 } },
+  },
 };
 
 /**
@@ -49,6 +66,8 @@ export function RevealText({
   id,
 }: RevealTextProps) {
   const MotionTag = motion[as] as typeof motion.div;
+  const word = useReducedMotion() ? fade : rise;
+
   // Split into lines, remembering which kind of break came before each one.
   const lines = text.split(/(?=[\n|])/).map((part, i) => ({
     soft: i > 0 && part.startsWith("|"),
@@ -101,10 +120,7 @@ export function RevealText({
                   <motion.span
                     data-reveal=""
                     variants={word}
-                    className={cn(
-                      "inline-block origin-bottom-left will-change-transform",
-                      isAccent && "accent",
-                    )}
+                    className={cn("inline-block origin-bottom-left", isAccent && "accent")}
                   >
                     {clean}
                   </motion.span>

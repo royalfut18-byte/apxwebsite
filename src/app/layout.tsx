@@ -6,7 +6,6 @@ import { Cursor } from "@/components/Cursor";
 import { Intro } from "@/components/Intro";
 import { Nav } from "@/components/Nav";
 import { IntroProvider } from "@/components/providers/IntroProvider";
-import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { services, site } from "@/lib/site";
 
 import "./globals.css";
@@ -123,6 +122,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-AU"
+      data-scroll-behavior="smooth"
       className={`${mona.variable} ${instrument.variable} ${geistMono.variable} antialiased`}
     >
       <body>
@@ -143,15 +143,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
 
         <IntroProvider>
-          <SmoothScroll />
           <Intro />
           <Nav />
           <AltitudeHud />
           <Cursor />
           {children}
         </IntroProvider>
-
-        <div className="grain" aria-hidden="true" />
       </body>
     </html>
   );

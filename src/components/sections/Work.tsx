@@ -20,7 +20,17 @@ const ARROW = (
  * A browser window and a phone showing the real, live site. The captures are long,
  * so as the card moves through the screen they scroll, like someone browsing it.
  * The pair tilts gently toward the pointer.
+ *
+ * The captures are trimmed to exactly the stretch that scrolls past (see TRAVEL), and are
+ * asked for at about the size they are drawn rather than the largest the screen could
+ * take: long images are costly to decode, and that is felt as a stutter while scrolling.
  */
+const TRAVEL = { desktop: "-64%", mobile: "-44%" };
+const SIZES = {
+  desktop: "(min-width: 1024px) 50vw, (min-width: 768px) 64vw, 58vw",
+  mobile: "12vw",
+};
+
 function Devices({
   project,
   travel,
@@ -37,8 +47,8 @@ function Devices({
   const rotateX = useSpring(tiltX, { stiffness: 140, damping: 18, mass: 0.6 });
   const rotateY = useSpring(tiltY, { stiffness: 140, damping: 18, mass: 0.6 });
 
-  const desktopY = useTransform(travel, [0, 1], ["0%", "-52%"]);
-  const mobileY = useTransform(travel, [0, 1], ["0%", "-34%"]);
+  const desktopY = useTransform(travel, [0, 1], ["0%", TRAVEL.desktop]);
+  const mobileY = useTransform(travel, [0, 1], ["0%", TRAVEL.mobile]);
 
   function onMove(e: React.PointerEvent<HTMLDivElement>) {
     if (still || e.pointerType !== "mouse" || !ref.current) return;
@@ -67,14 +77,16 @@ function Devices({
             </span>
             <span className="hidden w-12 md:block" />
           </div>
-          <div className="relative aspect-[16/10.4] overflow-hidden bg-white">
+          <div
+            className="relative aspect-[16/10.4] overflow-hidden"
+            style={{ backgroundColor: project.tint.desktop }}
+          >
             <motion.div className="will-change-transform" style={still ? undefined : { y: desktopY }}>
               <Image
                 src={project.desktop}
                 alt={`The ${project.name} website on a desktop screen`}
-                placeholder="blur"
                 quality={90}
-                sizes="(min-width: 1024px) 56vw, 92vw"
+                sizes={SIZES.desktop}
                 className="block h-auto w-full"
               />
             </motion.div>
@@ -86,14 +98,16 @@ function Devices({
           className="absolute -bottom-[7%] -left-[4%] w-[23%] overflow-hidden rounded-[1.1rem] bg-[#0c0c0d] p-[3px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)] md:-left-[7%] md:rounded-[1.75rem] md:p-[5px]"
           style={{ transform: "translateZ(50px)" }}
         >
-          <div className="relative aspect-[9/18.6] overflow-hidden rounded-[0.9rem] bg-white md:rounded-[1.4rem]">
+          <div
+            className="relative aspect-[9/18.6] overflow-hidden rounded-[0.9rem] md:rounded-[1.4rem]"
+            style={{ backgroundColor: project.tint.mobile }}
+          >
             <motion.div className="will-change-transform" style={still ? undefined : { y: mobileY }}>
               <Image
                 src={project.mobile}
                 alt={`The ${project.name} website on a phone`}
-                placeholder="blur"
                 quality={90}
-                sizes="(min-width: 1024px) 14vw, 24vw"
+                sizes={SIZES.mobile}
                 className="block h-auto w-full"
               />
             </motion.div>
@@ -150,6 +164,9 @@ function ProjectCard({
           top: stacked ? index * 14 : 0,
           backgroundColor: theme.bg,
           color: theme.fg,
+          // Its own layer while stacked, so shrinking it is a job for the graphics card
+          // and the card is not redrawn at every step.
+          willChange: stacked ? "transform" : undefined,
         }}
       >
         <div className="grid h-full gap-10 p-6 pb-0 md:gap-12 md:p-10 md:pb-0 lg:grid-cols-12 lg:gap-6 lg:p-12 lg:pb-0 xl:p-14 xl:pb-0">
@@ -225,7 +242,7 @@ function ProjectCard({
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-ink"
-          style={{ opacity: stacked ? shade : 0 }}
+          style={{ opacity: stacked ? shade : 0, willChange: stacked ? "opacity" : undefined }}
         />
       </motion.article>
     </div>

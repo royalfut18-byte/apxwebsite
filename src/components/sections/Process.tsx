@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
+import { motion, useMotionValue, useScroll, useTransform, type MotionValue } from "framer-motion";
 import { useRef } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -69,13 +69,13 @@ export function Process() {
   const narrow = useRef<HTMLOListElement>(null);
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
 
-  const { scrollYProgress: wideRaw } = useScroll({ target: wide, offset: ["start 0.85", "end 0.6"] });
-  const { scrollYProgress: narrowRaw } = useScroll({ target: narrow, offset: ["start 0.75", "end 0.55"] });
-  const wideSpring = useSpring(wideRaw, { stiffness: 90, damping: 24, restDelta: 0.001 });
-  const narrowSpring = useSpring(narrowRaw, { stiffness: 90, damping: 24, restDelta: 0.001 });
+  // The route follows the scroll position directly, so nothing keeps animating once
+  // the page has stopped moving.
+  const { scrollYProgress: wideScroll } = useScroll({ target: wide, offset: ["start 0.85", "end 0.6"] });
+  const { scrollYProgress: narrowScroll } = useScroll({ target: narrow, offset: ["start 0.75", "end 0.55"] });
   const full = useMotionValue(1);
-  const wideProgress = reduced ? full : wideSpring;
-  const narrowProgress = reduced ? full : narrowSpring;
+  const wideProgress = reduced ? full : wideScroll;
+  const narrowProgress = reduced ? full : narrowScroll;
 
   return (
     <section id="process" aria-labelledby="process-title" className="px-2 md:px-4">

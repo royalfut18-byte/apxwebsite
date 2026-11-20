@@ -55,6 +55,8 @@
     overflow-x: clip;
     /* The page is locked during the intro. Keeping the gutter means nothing jumps when it unlocks. */
     scrollbar-gutter: stable;
+    /* In-page links glide. Scrolling itself is left entirely to the browser, which keeps it smooth. */
+    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     scrollbar-color: var(--color-ink-500) var(--color-ink);
@@ -84,23 +86,6 @@
   [id] {
     scroll-margin-top: 5rem;
   }
-}
-
-/* Lenis (smooth scroll) recommended rules */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis:not(.lenis-autoToggle).lenis-stopped {
-  overflow: clip;
-}
-.lenis [data-lenis-prevent],
-.lenis [data-lenis-prevent-wheel],
-.lenis [data-lenis-prevent-touch] {
-  overscroll-behavior: contain;
-}
-.lenis-smooth iframe {
-  pointer-events: none;
 }
 
 /* The intro and the mobile menu lock scrolling while they are up. Only ever set by JS. */
@@ -167,23 +152,6 @@ html.is-locked body {
    --------------------------------------------------------------------------- */
 
 @layer components {
-  /* Static film grain over everything. Cheap: one tiny inline SVG, no animation. */
-  .grain {
-    position: fixed;
-    inset: 0;
-    z-index: 70;
-    pointer-events: none;
-    opacity: 0.055;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  /* A full-screen blend layer is a lot to ask of a phone's GPU while scrolling. */
-  @media (width < 48rem) {
-    .grain {
-      display: none;
-    }
-  }
-
   /* Underline that wipes in from the left. Carries its own colour transition. */
   .link-sweep {
     background-image: linear-gradient(currentColor, currentColor);
@@ -244,8 +212,22 @@ html.is-locked body {
     }
   }
 
+  /* A soft ring that pulses out of a dot. Only transform and opacity move. */
   .pulse-dot {
-    animation: pulse-dot 2.4s var(--ease-quart) infinite;
+    position: relative;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--color-ember);
+    animation: pulse-ring 2.4s var(--ease-quart) infinite;
+  }
+
+  /* The little ember segment that runs down the hero's "scroll" line. */
+  .scroll-hint {
+    animation: scroll-hint 2.2s var(--ease-swift) infinite;
   }
 }
 
@@ -255,21 +237,71 @@ html.is-locked body {
   }
 }
 
-@keyframes pulse-dot {
+@keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 60%, transparent);
+    opacity: 0.55;
+    transform: scale(1);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 10px transparent;
+    opacity: 0;
+    transform: scale(3.6);
+  }
+}
+
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(-100%);
+  }
+  75%,
+  100% {
+    transform: translateY(260%);
   }
 }
 
 /* ---------------------------------------------------------------------------
-   Intro failsafes
+   Intro
+   The curtain is in the page's HTML, so it covers the page from the first paint.
+   Until the scripts arrive, the rules below keep it alive using nothing but CSS:
+   a hairline creeps along the bottom, and if the wait drags on, the peak mark
+   fades in and pulses. Once Framer Motion takes over it adds "intro-live" to
+   <html>, which hands everything over to it.
    --------------------------------------------------------------------------- */
 
-/* If scripts never arrive, the intro curtain removes itself so the page is never blocked. */
+@keyframes intro-creep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.42);
+  }
+}
+.intro-creep {
+  animation: intro-creep 10s cubic-bezier(0.1, 0.7, 0.2, 1) 0.2s both;
+}
+
+@keyframes intro-mark-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes intro-mark-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+.intro-mark {
+  opacity: 0;
+  animation:
+    intro-mark-in 0.5s ease 0.7s forwards,
+    intro-mark-pulse 0.9s ease-in-out 1.2s infinite alternate;
+}
+html.intro-live .intro-mark {
+  animation: none;
+  opacity: 0;
+}
+
+/* If the scripts never arrive at all, the curtain removes itself: the page is never blocked. */
 @keyframes intro-failsafe {
   to {
     opacity: 0;
@@ -277,15 +309,21 @@ html.is-locked body {
   }
 }
 .intro-root {
-  animation: intro-failsafe 0.5s linear 8s forwards;
+  animation: intro-failsafe 0.6s linear 12s forwards;
+}
+html.intro-live .intro-root {
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .intro-root {
-    display: none !important;
+  html {
+    scroll-behavior: auto;
   }
+  .intro-creep,
+  .intro-mark,
   .caret,
-  .pulse-dot {
+  .scroll-hint,
+  .pulse-dot::after {
     animation: none;
   }
 }

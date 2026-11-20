@@ -3,15 +3,30 @@
 import type { MotionValue } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
+import { TerrainStill } from "./TerrainStill";
+
 /**
  * The APX mountain: a live topographic model drawn as contour lines.
  *
- * Written against raw WebGL2 on purpose. It is one mesh and one shader, so pulling in a
- * 3D library would cost more than the whole scene. Everything is computed on the GPU:
- * the height field in the vertex shader, the contour lines in the fragment shader.
+ * Written against raw WebGL2 on purpose: it is one mesh and one small shader, so a 3D
+ * library would cost more than the whole scene.
  *
- * The scene pauses itself whenever it is off screen or the tab is hidden, and renders a
- * single still frame for visitors who ask for reduced motion.
+ * It is built to be cheap. The shape of the mountain (several layers of noise) is
+ * computed once, into a texture, when the scene starts. After that every frame only
+ * reads that texture, so the per-pixel work is a handful of lookups rather than the
+ * noise itself. Shaders compile in the background where the browser allows it, the
+ * scene pauses whenever it is off screen or the tab is hidden, drops to 30 frames a
+ * second when nothing is moving, and draws a single still frame for visitors who ask
+ * for reduced motion.
+ *
+ * It also looks after devices that cannot keep up, in three steps:
+ *
+ *  1. If frames arrive late it lowers its own resolution, quickly, until they do not.
+ *  2. If that is not enough it stops animating and holds one still frame.
+ *  3. If the browser has no graphics hardware to draw with at all (acceleration switched
+ *     off, a very old machine), it never starts: <TerrainStill /> shows a picture of the
+ *     mountain instead. A software-drawn scene would run at a few frames a second and
+ *     take the rest of the page down with it.
  */
 
 type TerrainProps = {
@@ -29,6 +44,10 @@ type TerrainProps = {
    * top-left corner, so HTML can be pinned to the peak.
    */
   summit?: { x: MotionValue<number>; y: MotionValue<number> };
+  /** Resolution multiplier, for scenes that sit quietly in the background. Default 1. */
+  detail?: number;
+  /** Frame-rate ceiling. Background scenes can ask for 30. Default 60. */
+  maxFps?: 30 | 60;
 };
 
 const NOISE = /* glsl */ `
@@ -61,12 +80,30 @@ float snoise(vec2 v) {
 }
 `;
 
-// The height field. Shared by both shaders: the vertex shader uses it to build the
-// surface, the fragment shader re-evaluates it per pixel so the contour lines stay
-// perfectly smooth however coarse the mesh is.
-const HEIGHT = /* glsl */ `
-uniform float uTime;
+/** Heights are stored as 16-bit values between 0 and this ceiling. */
+const HEIGHT_CEILING = "3.0";
+
+// --- pass one: bake the height field into a texture (runs once) ----------------------
+
+const BAKE_VERT = /* glsl */ `#version 300 es
+precision highp float;
+out vec2 vUv;
+void main() {
+  // One oversized triangle that covers the whole target.
+  vec2 p = vec2(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0);
+  vUv = p * 0.5 + 0.5;
+  gl_Position = vec4(p, 0.0, 1.0);
+}
+`;
+
+const BAKE_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+
+in vec2 vUv;
 uniform float uSize;
+out vec4 outColor;
+
+${NOISE}
 
 float terrain(vec2 p) {
   float r = length(p);
@@ -98,10 +135,44 @@ float terrain(vec2 p) {
   float ridgeMask = exp(-rq * 0.62) * smoothstep(0.05, 0.5, rq);
 
   float hills = 0.16 * (snoise(p * 0.55 + 20.0) * 0.5 + 0.5) + 0.045 * snoise(p * 1.3 - 4.0);
-  float breathe = 0.02 * snoise(p * 0.6 + vec2(uTime * 0.05, -uTime * 0.035));
   float plain = smoothstep(uSize, uSize * 0.3, r);
 
-  return summit + massif + shoulder + ridges * 0.62 * ridgeMask + (hills + breathe) * plain;
+  return summit + massif + shoulder + ridges * 0.62 * ridgeMask + hills * plain;
+}
+
+void main() {
+  vec2 p = (vUv * 2.0 - 1.0) * uSize;
+  // Pack the height into two 8-bit channels (16 bits), which every device can render to.
+  float v = clamp(terrain(p) / ${HEIGHT_CEILING}, 0.0, 1.0) * 65535.0;
+  float hi = floor(v / 256.0);
+  float lo = floor(v - hi * 256.0);
+  outColor = vec4(hi / 255.0, lo / 255.0, 0.0, 1.0);
+}
+`;
+
+// --- pass two: draw the mountain from the baked texture (runs every frame) -----------
+
+const SAMPLE = /* glsl */ `
+uniform highp sampler2D uHeight;
+uniform float uSize;
+uniform float uTexSize;
+
+float texel(ivec2 ij) {
+  vec2 c = texelFetch(uHeight, clamp(ij, ivec2(0), ivec2(int(uTexSize) - 1)), 0).rg;
+  return (c.r * 65280.0 + c.g * 255.0) * (${HEIGHT_CEILING} / 65535.0);
+}
+
+// Bilinear read of the height texture at a world position.
+float heightAt(vec2 p) {
+  vec2 t = (p / uSize * 0.5 + 0.5) * uTexSize - 0.5;
+  vec2 i = floor(t);
+  vec2 f = t - i;
+  ivec2 ij = ivec2(i);
+  return mix(
+    mix(texel(ij), texel(ij + ivec2(1, 0)), f.x),
+    mix(texel(ij + ivec2(0, 1)), texel(ij + ivec2(1, 1)), f.x),
+    f.y
+  );
 }
 `;
 
@@ -117,12 +188,11 @@ out vec3 vWorld;
 
 invariant gl_Position;
 
-${NOISE}
-${HEIGHT}
+${SAMPLE}
 
 void main() {
   vec2 p = aPos * uSize;
-  vWorld = vec3(p.x, terrain(p), p.y);
+  vWorld = vec3(p.x, heightAt(p), p.y);
   vec4 clip = uViewProj * vec4(vWorld, 1.0);
   clip.xy += uShift * clip.w;
   gl_Position = clip;
@@ -140,6 +210,7 @@ uniform vec3 uLine;
 uniform vec3 uEmber;
 uniform vec2 uPointer;
 uniform vec2 uRes;
+uniform float uTime;
 uniform float uPeak;
 uniform float uIntensity;
 uniform float uFog;
@@ -149,8 +220,7 @@ uniform float uThick;
 
 out vec4 outColor;
 
-${NOISE}
-${HEIGHT}
+${SAMPLE}
 
 float contour(float f, float width) {
   float w = fwidth(f);
@@ -165,7 +235,8 @@ void main() {
     return;
   }
 
-  float h = terrain(vWorld.xz);
+  // Read the height per pixel, so the contour lines stay smooth however coarse the mesh is.
+  float h = heightAt(vWorld.xz);
 
   const float interval = 0.05;
   float f = h / interval;
@@ -227,7 +298,7 @@ void main() {
 
 // --- the same height field in JavaScript ---------------------------------------------
 // Only used once, at start-up, to find where the summit is so a label can be pinned
-// to it. It mirrors the GLSL above (minus the slow "breathing", which barely moves the peak).
+// to it. It mirrors the GLSL height field above.
 
 const mod289 = (x: number) => x - Math.floor(x / 289) * 289;
 const permute = (x: number) => mod289((x * 34 + 1) * x);
@@ -418,29 +489,22 @@ const SIZE = 5.2;
 /** The hero summit never sits closer than this to the top of the canvas, in CSS pixels. */
 const SUMMIT_CLEARANCE = 156;
 
-// Adaptive resolution (see `measure` below).
-const TUNE_WARMUP_MS = 2500; // let the page's own entrance animations finish first
-const TUNE_WINDOW = 45; // frames averaged per reading
-const TUNE_SLOW_MS = 24; // slower than about 42 frames a second
-const TUNE_STEP = 0.8; // each step renders 80% of the previous width and height
+// Adaptive resolution (see `measure` below). Times are how long one drawn frame holds
+// the browser up: about 17 ms on a healthy 60 Hz screen.
+const TUNE_WARMUP_MS = 1200; // let the page's own entrance animations get going first
+const TUNE_WINDOW = 30; // frames averaged per reading...
+const TUNE_WINDOW_MS = 1500; // ...or this much time, whichever comes first
+const TUNE_SLOW_MS = 24; // slower than about 42 frames a second: render 80% of the size
+const TUNE_STEP = 0.8;
+const TUNE_VERY_SLOW_MS = 40; // slower than 25: 62%, to get there sooner
+const TUNE_BIG_STEP = 0.62;
+const TUNE_HOPELESS_MS = 80; // slower than 12: straight to the smallest size
 const TUNE_FLOOR = 0.5;
-
-function compile(gl: WebGL2RenderingContext, type: number, source: string) {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Terrain shader failed to compile:", gl.getShaderInfoLog(shader));
-    }
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
-}
+const TUNE_GIVE_UP_MS = 40; // still slower than 25 with nothing left to try: hold a still
 
 type Live = Pick<TerrainProps, "view" | "progress" | "intensity" | "active" | "summit">;
+
+type Built = { program: WebGLProgram; shaders: WebGLShader[] };
 
 /**
  * Creates the WebGL scene on `canvas` and returns a function that tears it down.
@@ -452,37 +516,80 @@ function createScene(
   live: { current: Live },
   wake: { current: (() => void) | null },
   fail: () => void,
+  options: { detail: number; maxFps: number },
 ): (() => void) | undefined {
+  const smallScreen = window.matchMedia("(max-width: 767px)").matches;
   const gl = canvas.getContext("webgl2", {
     alpha: true,
-    antialias: true,
+    // The contour lines are antialiased in the shader. Multisampling would only smooth the
+    // silhouette, and on dense screens it costs far more than it shows.
+    antialias: (window.devicePixelRatio || 1) < 1.5,
     premultipliedAlpha: true,
-    powerPreference: "high-performance",
+    // Step 3 above: no context at all rather than one drawn by the processor.
+    failIfMajorPerformanceCaveat: true,
   });
   if (!gl) {
     fail();
     return;
   }
 
-  const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-  const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-  const program = gl.createProgram();
-  if (!vs || !fs || !program) {
+  // Some browsers hand over a software renderer without calling it a caveat. Its name
+  // gives it away (SwiftShader, llvmpipe, Microsoft Basic Render Driver and friends).
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? "");
+  if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) {
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
     fail();
     return;
   }
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+  // Where the browser supports it, shaders compile off the main thread and we simply
+  // check back each frame. Elsewhere the first status check waits for the compiler,
+  // which happens here, at start-up, before anything on the page is moving.
+  const parallel = gl.getExtension("KHR_parallel_shader_compile");
+
+  function build(vertex: string, fragment: string): Built | null {
+    const program = gl!.createProgram();
+    if (!program) return null;
+    const shaders: WebGLShader[] = [];
+    for (const [type, source] of [
+      [gl!.VERTEX_SHADER, vertex],
+      [gl!.FRAGMENT_SHADER, fragment],
+    ] as const) {
+      const shader = gl!.createShader(type);
+      if (!shader) return null;
+      gl!.shaderSource(shader, source);
+      gl!.compileShader(shader);
+      gl!.attachShader(program, shader);
+      shaders.push(shader);
+    }
+    gl!.linkProgram(program);
+    return { program, shaders };
+  }
+  const compiled = (b: Built) =>
+    !parallel || Boolean(gl.getProgramParameter(b.program, parallel.COMPLETION_STATUS_KHR));
+  function linked(b: Built) {
+    if (gl!.getProgramParameter(b.program, gl!.LINK_STATUS)) return true;
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Terrain shader failed:", gl!.getProgramInfoLog(b.program));
+      for (const shader of b.shaders) console.error(gl!.getShaderInfoLog(shader));
+    }
+    return false;
+  }
+  function discard(b: Built) {
+    for (const shader of b.shaders) gl!.deleteShader(shader);
+    gl!.deleteProgram(b.program);
+  }
+
+  const bake = build(BAKE_VERT, BAKE_FRAG);
+  const main = build(VERT, FRAG);
+  if (!bake || !main) {
     fail();
     return;
   }
-  gl.useProgram(program);
 
   // A flat grid. The vertex shader lifts it into a mountain.
-  const coarse = window.matchMedia("(max-width: 767px)").matches;
-  const N = coarse ? 190 : 270;
+  const N = smallScreen ? 190 : 270;
   const positions = new Float32Array((N + 1) * (N + 1) * 2);
   let k = 0;
   for (let z = 0; z <= N; z++) {
@@ -511,6 +618,7 @@ function createScene(
   // The highest vertex: where the callout pins, and what "100% altitude" means in the shader.
   const peak = findSummit(N);
 
+  const bakeVao = gl.createVertexArray();
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   const vbo = gl.createBuffer();
@@ -522,33 +630,24 @@ function createScene(
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-  const U = (name: string) => gl.getUniformLocation(program, name);
-  const u = {
-    viewProj: U("uViewProj"),
-    shift: U("uShift"),
-    time: U("uTime"),
-    size: U("uSize"),
-    cam: U("uCam"),
-    bg: U("uBg"),
-    line: U("uLine"),
-    ember: U("uEmber"),
-    pointer: U("uPointer"),
-    res: U("uRes"),
-    peak: U("uPeak"),
-    intensity: U("uIntensity"),
-    fog: U("uFog"),
-    torch: U("uTorch"),
-    pass: U("uPass"),
-    thick: U("uThick"),
-  };
-  gl.uniform1f(u.size, SIZE);
-  gl.uniform1f(u.peak, peak[1]);
-  gl.uniform3fv(u.bg, BG);
-  gl.uniform3fv(u.line, LINE);
-  gl.uniform3fv(u.ember, EMBER);
+  const heightSize = smallScreen ? 512 : 1024;
+  const heightTex = gl.createTexture();
 
-  gl.enable(gl.DEPTH_TEST);
-  gl.clearColor(0, 0, 0, 0);
+  const U = (name: string) => gl.getUniformLocation(main.program, name);
+  let u: Record<
+    | "viewProj"
+    | "shift"
+    | "time"
+    | "cam"
+    | "pointer"
+    | "res"
+    | "intensity"
+    | "fog"
+    | "torch"
+    | "pass"
+    | "thick",
+    WebGLUniformLocation | null
+  >;
 
   const proj = new Float32Array(16);
   const viewM = new Float32Array(16);
@@ -558,12 +657,14 @@ function createScene(
   const finePointer = window.matchMedia("(pointer: fine)").matches;
 
   const state = {
+    ready: false, // shaders linked and the height texture baked
     width: 1,
     height: 1,
     dpr: 1,
     time: reduced ? 14 : 0,
     last: 0,
     raf: 0,
+    waiting: 0,
     visible: false,
     // pointer, normalised to -1..1 across the canvas, eased
     px: 0,
@@ -575,20 +676,31 @@ function createScene(
     my: -9999,
     torch: 0,
     torchTarget: 0,
+    // what the last drawn frame was given, to tell whether anything is changing
+    seenProgress: -1,
+    seenIntensity: -1,
+    held: false, // the previous animation frame was skipped (30 fps pacing)
+    drewAt: 0, // when the previous animation frame drew, or 0 if it did not
+    // One frame only, redrawn when something asks: reduced motion, or a device that
+    // could not keep up (see `freeze`).
+    still: reduced,
+    frozen: false,
     lost: false,
+    disposed: false,
   };
 
   // Adaptive resolution. If frames keep arriving late, the canvas is rendered a step smaller
   // and stretched back up by CSS, which is what a struggling GPU needs. If two steps in a
   // row change nothing, the hold-up is elsewhere (a 30 Hz display, a battery saver capping
   // the frame rate), so the detail is put back and the scene is left alone from then on.
+  // And if the smallest size is still too slow, the scene stops animating (see `freeze`).
   const tune = {
     quality: 1, // multiplier on the canvas resolution
     good: 1, // the last quality that was shown to help (or the starting one)
     since: 0, // when the first frame was drawn
-    frames: 0,
-    total: 0,
-    before: 0, // average frame time ahead of the latest step down
+    samples: [] as number[], // frame times in the current reading
+    total: 0, // their sum
+    before: 0, // typical frame time ahead of the latest step down
     misses: 0, // consecutive steps that made no difference
     skip: false, // ignore the next frame (it follows a pause)
     settled: reduced,
@@ -603,16 +715,18 @@ function createScene(
     }
     if (now - tune.since < TUNE_WARMUP_MS) return;
 
-    tune.frames++;
+    tune.samples.push(frameMs);
     tune.total += Math.min(frameMs, 500);
-    if (tune.frames < TUNE_WINDOW) return;
+    if (tune.samples.length < TUNE_WINDOW && (tune.total < TUNE_WINDOW_MS || tune.samples.length < 6)) return;
 
-    const average = tune.total / tune.frames;
-    tune.frames = 0;
+    // The middle value, not the mean: a slow graphics card makes every frame late, while
+    // the page's own start-up work only delays a few of them and should not count.
+    const typical = tune.samples.sort((a, b) => a - b)[tune.samples.length >> 1];
+    tune.samples = [];
     tune.total = 0;
 
     if (tune.before > 0) {
-      if (average > tune.before * 0.88) {
+      if (typical > tune.before * 0.88) {
         tune.misses++;
       } else {
         tune.misses = 0;
@@ -620,17 +734,36 @@ function createScene(
       }
     }
 
-    if (tune.misses >= 2) {
+    const stuck = tune.misses >= 2;
+    const floored = tune.quality <= TUNE_FLOOR;
+    if (typical > TUNE_GIVE_UP_MS && (stuck || floored)) {
+      freeze();
+    } else if (stuck) {
       tune.quality = tune.good;
       tune.settled = true;
       resize();
-    } else if (average > TUNE_SLOW_MS && tune.quality > TUNE_FLOOR) {
-      tune.before = average;
-      tune.quality = Math.max(TUNE_FLOOR, tune.quality * TUNE_STEP);
+    } else if (typical > TUNE_SLOW_MS && !floored) {
+      tune.before = typical;
+      const step = typical > TUNE_HOPELESS_MS ? 0 : typical > TUNE_VERY_SLOW_MS ? TUNE_BIG_STEP : TUNE_STEP;
+      tune.quality = Math.max(TUNE_FLOOR, tune.quality * step);
       resize();
     } else {
       tune.settled = true;
     }
+  }
+
+  /**
+   * The last resort for a device that cannot animate the scene at any resolution: stop,
+   * and leave one sharp frame of the mountain in its opening pose. The page around it
+   * gets the device's full attention from then on.
+   */
+  function freeze() {
+    tune.settled = true;
+    tune.quality = 1;
+    state.frozen = true;
+    state.still = true;
+    resize();
+    kick();
   }
 
   function resize() {
@@ -639,9 +772,9 @@ function createScene(
     const cssH = Math.max(1, rect.height);
     // Cap the pixel count so large or dense displays do not pay for detail nobody can see.
     const budget = 2_400_000;
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let dpr = Math.min(window.devicePixelRatio || 1, smallScreen ? 1.5 : 2);
     if (cssW * cssH * dpr * dpr > budget) dpr = Math.sqrt(budget / (cssW * cssH));
-    dpr = Math.max(0.5, Math.max(0.75, dpr) * tune.quality);
+    dpr = Math.max(0.5, Math.max(0.75, dpr) * tune.quality * options.detail);
     state.dpr = dpr;
     state.width = Math.round(cssW * dpr);
     state.height = Math.round(cssH * dpr);
@@ -651,13 +784,68 @@ function createScene(
     }
   }
 
-  function draw(now: number) {
-    if (state.lost) return;
-    const frameMs = state.last ? now - state.last : 0;
+  /** Runs once, as soon as both shader programs have finished compiling. */
+  function begin() {
+    if (!linked(bake!) || !linked(main!)) {
+      state.lost = true;
+      fail();
+      return;
+    }
+
+    // Bake the height field. One draw, then the noise program is no longer needed.
+    gl!.activeTexture(gl!.TEXTURE0);
+    gl!.bindTexture(gl!.TEXTURE_2D, heightTex);
+    gl!.texStorage2D(gl!.TEXTURE_2D, 1, gl!.RGBA8, heightSize, heightSize);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, gl!.NEAREST);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, gl!.NEAREST);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
+    const target = gl!.createFramebuffer();
+    gl!.bindFramebuffer(gl!.FRAMEBUFFER, target);
+    gl!.framebufferTexture2D(gl!.FRAMEBUFFER, gl!.COLOR_ATTACHMENT0, gl!.TEXTURE_2D, heightTex, 0);
+    gl!.viewport(0, 0, heightSize, heightSize);
+    gl!.disable(gl!.DEPTH_TEST);
+    gl!.disable(gl!.BLEND);
+    gl!.useProgram(bake!.program);
+    gl!.uniform1f(gl!.getUniformLocation(bake!.program, "uSize"), SIZE);
+    gl!.bindVertexArray(bakeVao);
+    gl!.drawArrays(gl!.TRIANGLES, 0, 3);
+    gl!.bindFramebuffer(gl!.FRAMEBUFFER, null);
+    gl!.deleteFramebuffer(target);
+    discard(bake!);
+
+    gl!.useProgram(main!.program);
+    gl!.bindVertexArray(vao);
+    u = {
+      viewProj: U("uViewProj"),
+      shift: U("uShift"),
+      time: U("uTime"),
+      cam: U("uCam"),
+      pointer: U("uPointer"),
+      res: U("uRes"),
+      intensity: U("uIntensity"),
+      fog: U("uFog"),
+      torch: U("uTorch"),
+      pass: U("uPass"),
+      thick: U("uThick"),
+    };
+    gl!.uniform1i(U("uHeight"), 0);
+    gl!.uniform1f(U("uTexSize"), heightSize);
+    gl!.uniform1f(U("uSize"), SIZE);
+    gl!.uniform1f(U("uPeak"), peak[1]);
+    gl!.uniform3fv(U("uBg"), BG);
+    gl!.uniform3fv(U("uLine"), LINE);
+    gl!.uniform3fv(U("uEmber"), EMBER);
+    gl!.enable(gl!.DEPTH_TEST);
+    gl!.clearColor(0, 0, 0, 0);
+
+    state.ready = true;
+    kick();
+  }
+
+  function draw(now: number, frameMs: number) {
     const dt = frameMs ? Math.min(frameMs / 1000, 0.05) : 0.016;
-    state.last = now;
-    if (!reduced) state.time += dt;
-    measure(now, frameMs);
+    if (!state.still) state.time += dt;
 
     const ease = 1 - Math.exp(-dt * 3.2);
     state.px += (state.tx - state.px) * ease;
@@ -665,8 +853,8 @@ function createScene(
     state.torch += (state.torchTarget - state.torch) * (1 - Math.exp(-dt * 5));
 
     const { view: v, progress: prog, intensity: inten } = live.current;
-    // With reduced motion the camera stays put: no scroll-driven fly-over.
-    const p = reduced ? 0 : smooth(Math.min(1, Math.max(0, prog ? prog.get() : 0)));
+    // A still frame keeps the camera where it starts: no scroll-driven fly-over.
+    const p = state.still ? 0 : smooth(Math.min(1, Math.max(0, prog ? prog.get() : 0)));
     const aspect = state.width / state.height;
     const portrait = aspect < 0.9;
 
@@ -734,7 +922,8 @@ function createScene(
     gl!.uniform3f(u.cam, eye[0], eye[1], eye[2]);
     gl!.uniform2f(u.pointer, state.mx, state.my);
     gl!.uniform2f(u.res, state.width, state.height);
-    gl!.uniform1f(u.intensity, inten ? Math.min(1, Math.max(0, inten.get())) : 1);
+    // A frozen scene is not redrawn as the page scrolls, so it is drawn at full strength.
+    gl!.uniform1f(u.intensity, inten && !state.frozen ? Math.min(1, Math.max(0, inten.get())) : 1);
     gl!.uniform1f(u.fog, fog);
     gl!.uniform1f(u.torch, state.torch);
     // Keep lines a steady visual weight on dense screens instead of hairline-thin.
@@ -762,14 +951,47 @@ function createScene(
 
   function loop(now: number) {
     state.raf = 0;
+    if (state.lost || state.disposed || !state.ready) return;
     if (!state.visible || document.hidden || !live.current.active) return;
-    draw(now);
-    if (!reduced) state.raf = requestAnimationFrame(loop);
+
+    // If the last frame drew, the wait for this one is what that drawing cost. (Timing
+    // drawn frames this way gives the same answer at 60 frames a second and at 30.)
+    if (state.drewAt) measure(now, now - state.drewAt);
+    state.drewAt = 0;
+
+    // Is anything actually changing? If not, the slow drift looks the same at half the rate.
+    const progress = live.current.progress?.get() ?? 0;
+    const intensity = live.current.intensity?.get() ?? 1;
+    const changing =
+      progress !== state.seenProgress ||
+      intensity !== state.seenIntensity ||
+      state.torchTarget > 0 ||
+      state.torch > 0.02 ||
+      Math.abs(state.tx - state.px) + Math.abs(state.ty - state.py) > 0.004;
+    const half = options.maxFps <= 30 || !changing;
+    if (half && !state.still && !state.held) {
+      state.held = true;
+      state.raf = requestAnimationFrame(loop);
+      return;
+    }
+    state.held = false;
+    state.seenProgress = progress;
+    state.seenIntensity = intensity;
+
+    const frameMs = state.last ? now - state.last : 0;
+    state.last = now;
+    draw(now, frameMs);
+    if (!state.still) {
+      state.drewAt = now;
+      state.raf = requestAnimationFrame(loop);
+    }
   }
 
   function kick() {
-    if (!state.raf && state.visible && !document.hidden) {
+    if (!state.raf && state.ready && state.visible && !document.hidden) {
       state.last = 0;
+      state.held = false;
+      state.drewAt = 0;
       state.raf = requestAnimationFrame(loop);
     }
   }
@@ -792,7 +1014,7 @@ function createScene(
 
   const ro = new ResizeObserver(() => {
     resize();
-    if (reduced) kick();
+    if (state.still) kick();
   });
   ro.observe(canvas);
 
@@ -828,10 +1050,21 @@ function createScene(
   // A still frame has no loop to pick up changes, so redraw when the fade value moves.
   const unsubscribe = reduced ? live.current.intensity?.on("change", kick) : undefined;
 
+  // Wait for the compiler without blocking, then bake and start drawing.
+  const poll = () => {
+    state.waiting = 0;
+    if (state.disposed) return;
+    if (compiled(bake) && compiled(main)) begin();
+    else state.waiting = requestAnimationFrame(poll);
+  };
+  poll();
+
   return () => {
+    state.disposed = true;
     wake.current = null;
     unsubscribe?.();
     cancelAnimationFrame(state.raf);
+    cancelAnimationFrame(state.waiting);
     ro.disconnect();
     io.disconnect();
     document.removeEventListener("visibilitychange", onVisibility);
@@ -841,9 +1074,10 @@ function createScene(
     gl.deleteBuffer(vbo);
     gl.deleteBuffer(ibo);
     gl.deleteVertexArray(vao);
-    gl.deleteProgram(program);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
+    gl.deleteVertexArray(bakeVao);
+    gl.deleteTexture(heightTex);
+    if (!state.ready && !state.lost) discard(bake);
+    discard(main);
   };
 }
 
@@ -854,6 +1088,8 @@ export function Terrain({
   intensity,
   active = true,
   summit,
+  detail = 1,
+  maxFps = 60,
 }: TerrainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
@@ -869,29 +1105,12 @@ export function Terrain({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    // Compiling shaders and building the mesh is the heaviest thing this page does, and
-    // nothing needs it in the first moments. Do it when the browser is idle instead of
-    // during hydration.
-    let dispose: (() => void) | undefined;
-    let cancelled = false;
-    const begin = () => {
-      if (!cancelled) dispose = createScene(canvas, live, wake, () => setFailed(true));
-    };
-    const idle = typeof window.requestIdleCallback === "function";
-    const handle = idle
-      ? window.requestIdleCallback(begin, { timeout: 1200 })
-      : window.setTimeout(begin, 200);
-
-    return () => {
-      cancelled = true;
-      if (idle) window.cancelIdleCallback(handle);
-      else window.clearTimeout(handle);
-      dispose?.();
-    };
+    return createScene(canvas, live, wake, () => setFailed(true), { detail, maxFps });
+    // The scene is created once; `detail` and `maxFps` are fixed for its lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (failed) return null;
+  if (failed) return <TerrainStill view={view} className={className} />;
 
   return <canvas ref={canvasRef} className={className} aria-hidden="true" />;
 }

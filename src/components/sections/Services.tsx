@@ -1,16 +1,16 @@
 "use client";
 
-import { AnimatePresence, motion, useInView, useMotionValue, useTransform } from "framer-motion";
+import { motion, useInView, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
-import { cn, ease } from "@/lib/cn";
+import { cn } from "@/lib/cn";
+import { scrollToTarget } from "@/lib/scroll";
 import { services, type ServiceKey } from "@/lib/site";
 
 import { SeoDemo } from "../demos/SeoDemo";
 import { SmsDemo } from "../demos/SmsDemo";
 import { SocialDemo } from "../demos/SocialDemo";
 import { WebsiteDemo } from "../demos/WebsiteDemo";
-import { scrollToTarget } from "../providers/SmoothScroll";
 import { Reveal } from "../ui/Reveal";
 import { SectionHeading } from "../ui/SectionHeading";
 
@@ -38,6 +38,9 @@ function Stage({ service }: { service: (typeof services)[number] }) {
   const stage = useRef<HTMLDivElement>(null);
   const scale = useMotionValue(1);
   const inverse = useTransform(scale, (v) => `${100 / v}%`);
+  // The demo is only created once its stage is close to the screen. Until then (and in
+  // whichever of the two layouts is not showing) the stage is an empty frame.
+  const near = useInView(stage, { once: true, margin: "600px 0px" });
 
   useEffect(() => {
     const el = stage.current;
@@ -54,14 +57,19 @@ function Stage({ service }: { service: (typeof services)[number] }) {
       ref={stage}
       className="relative flex aspect-[4/3.3] w-full flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-ink-800 sm:aspect-[4/3] lg:aspect-auto lg:h-[min(36rem,74vh)]"
     >
-      {/* Survey-map dots and a low ember glow */}
+      {/* Survey-map dots that fade toward the edges, and a low ember glow. All three are
+          plain gradients: no masks or blur filters for the browser to work out. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(75%_75%_at_50%_45%,black,transparent)]"
+        className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px]"
       />
       <div
         aria-hidden="true"
-        className="absolute -bottom-1/3 left-1/2 h-2/3 w-[85%] -translate-x-1/2 rounded-[100%] bg-ember/[0.16] blur-[90px]"
+        className="absolute inset-0 bg-[radial-gradient(75%_75%_at_50%_45%,transparent,var(--color-ink-800))]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(62%_58%_at_50%_100%,rgba(255,91,46,0.17),rgba(255,91,46,0.12)_30%,rgba(255,91,46,0.045)_62%,transparent)]"
       />
       <div className="relative flex items-center justify-between px-5 pt-5 md:px-7 md:pt-6">
         <span className="label text-faint">Fig. {service.index}</span>
@@ -69,9 +77,7 @@ function Stage({ service }: { service: (typeof services)[number] }) {
       </div>
       <div className="relative grid min-h-0 flex-1 place-items-center p-5 md:p-8">
         {/* Laid out smaller by the same factor it is scaled by, so it exactly fills the stage. */}
-        <motion.div style={{ scale, width: inverse, height: inverse }}>
-          <Demo />
-        </motion.div>
+        <motion.div style={{ scale, width: inverse, height: inverse }}>{near && <Demo />}</motion.div>
       </div>
     </div>
   );
@@ -145,44 +151,47 @@ export function Services() {
                         >
                           {service.title}
                         </span>
-                        <motion.span
+                        <span
                           aria-hidden="true"
-                          className="ml-auto block h-2 w-2 shrink-0 self-center rounded-full bg-ember"
-                          initial={false}
-                          animate={{ scale: on ? 1 : 0, opacity: on ? 1 : 0 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 24 }}
+                          className={cn(
+                            "ml-auto block h-2 w-2 shrink-0 self-center rounded-full bg-ember transition-[scale,opacity] duration-500 ease-[var(--ease-expo)]",
+                            on ? "scale-100 opacity-100" : "scale-0 opacity-0",
+                          )}
                         />
                       </button>
                     </h3>
-                    <AnimatePresence initial={false}>
-                      {on && (
-                        <motion.div
-                          key="body"
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.6, ease: ease.expo }}
-                          className="overflow-hidden"
-                        >
-                          <div className="pb-7 pl-12 pr-6">
-                            <p className="accent text-2xl">{service.kicker}</p>
-                            <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">
-                              {service.body}
-                            </p>
-                            <ul className="mt-5 flex flex-wrap gap-2">
-                              {service.points.map((point) => (
-                                <li
-                                  key={point}
-                                  className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim"
-                                >
-                                  {point}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </motion.div>
+                    {/* Opens by animating a grid row from 0fr to 1fr: the browser does it
+                        natively, with no script measuring heights on every frame. */}
+                    <div
+                      className={cn(
+                        "grid transition-[grid-template-rows] duration-600 ease-[var(--ease-expo)] motion-reduce:transition-none",
+                        on ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                       )}
-                    </AnimatePresence>
+                    >
+                      <div
+                        className={cn(
+                          "min-h-0 overflow-hidden transition-[opacity,visibility] duration-600 ease-[var(--ease-expo)] motion-reduce:transition-none",
+                          on ? "visible opacity-100" : "invisible opacity-0",
+                        )}
+                      >
+                        <div className="pb-7 pl-12 pr-6">
+                          <p className="accent text-2xl">{service.kicker}</p>
+                          <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">
+                            {service.body}
+                          </p>
+                          <ul className="mt-5 flex flex-wrap gap-2">
+                            {service.points.map((point) => (
+                              <li
+                                key={point}
+                                className="rounded-full border border-white/12 px-3.5 py-1.5 text-[0.8125rem] font-medium text-bone-dim"
+                              >
+                                {point}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </li>
                 );
               })}

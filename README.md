@@ -52,11 +52,13 @@ structured data.
 
 ### Add a portfolio project
 
-1. Capture the client's site: a desktop screenshot about 2160px wide and a mobile one about
-   780px wide. Tall captures work best, because the card scrolls through them.
+1. Capture the client's site from the top of the page down: a desktop screenshot
+   2160 x 4000 pixels and a mobile one 780 x 2920. The card scrolls through them, and those
+   heights are exactly as much as it ever shows (anything longer is wasted download).
 2. Save both as `.webp` in `src/assets/work/`.
 3. Add an entry to `src/lib/projects.ts`, following the existing ones. `theme` sets the card's
-   colours; take them from the client's own brand.
+   colours; take them from the client's own brand. `tint` is the flat colour each screen
+   shows for the moment before its capture has loaded: use the page's background colour.
 
 ## Contact form
 
@@ -86,23 +88,46 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 
 ## How it is put together
 
-- **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4**, **Framer Motion**, and
-  **Lenis** for smooth scrolling.
-- `src/components/Intro.tsx`: the opening sequence. The wordmark shares a `layoutId` with
-  the header logo, which is how it flies into place. Repeat visits in the same tab get a
-  shorter version.
+- **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4** and **Framer Motion**.
+  Scrolling is the browser's own; nothing sits between the visitor and the page.
+- `src/components/Intro.tsx`: the opening sequence, played in full on every visit to the
+  home page. The curtain is part of the page's HTML, so it is on screen from the first
+  paint, before any script has loaded. The wordmark shares a `layoutId` with the header
+  logo, which is how it flies into place.
 - `src/components/Terrain.tsx`: the mountain. Raw WebGL2, one mesh and one shader, no 3D
-  library. It pauses when off screen and lowers its own resolution on slow graphics
-  hardware. If WebGL is unavailable the hero keeps its glow and simply leaves the mountain
-  out.
-- `src/components/demos/`: the four small service animations.
+  library. The shape is computed once into a texture, so each frame is cheap. It pauses
+  when off screen, drops to 30 frames a second when nothing is moving, lowers its own
+  resolution on slow graphics hardware and, if that is not enough, holds a still frame.
+- `src/components/TerrainStill.tsx`: a picture of the mountain (in `src/assets/terrain/`),
+  shown where the live one cannot run: no WebGL2, or a browser with graphics acceleration
+  switched off.
+- `src/components/demos/`: the four small service animations. Each is only created when
+  its stage is about to scroll into view, and only runs while it is on screen.
 - `src/components/sections/`: one file per section of the page.
+
+### Keeping it fast
+
+The site is animation-heavy, so it follows a few rules. Worth keeping to when you add to it.
+
+- **Animate only `transform`, `opacity` and `clip-path`.** The browser runs those on the
+  graphics card, off the main thread, so they stay smooth while the page is busy. With
+  Framer Motion that means writing `animate={{ transform: "translateY(0px)" }}` rather
+  than animating `height`, `top`, colours or using `layout`.
+- **Nothing runs when it cannot be seen.** The marquee, the demos and both 3D scenes stop
+  when they are off screen.
+- **No blur filters, backdrop blurs or blend-mode overlays over large areas.** Glows are
+  plain gradients. These effects look cheap to write and are expensive to draw, most of
+  all on phones.
+- **Images are sized for where they are drawn.** The portfolio captures are trimmed, served
+  as WebP and capped at 1440 pixels wide (`next.config.ts`).
 
 ### Built in
 
 - **Accessibility**: real headings and landmarks, visible focus styles, a skip link, labelled
-  form fields with inline errors, and support for "reduce motion" (no intro, no parallax,
-  a still mountain, finished demo states).
+  form fields with inline errors, and support for the device's "reduce motion" setting.
+  With it on, nothing travels across the screen: the intro and the headlines fade instead
+  of sliding, the mountain is a still, the marquee stops and the demos show their finished
+  state. If the site looks static on your own device, check that setting first.
 - **Without JavaScript** the page still shows all of its content.
 - **SEO**: metadata, Open Graph image, structured data (`ProfessionalService`), sitemap,
   robots and a web manifest are generated from `src/lib/site.ts`.

@@ -1,68 +1,86 @@
 "use client";
 
-import {
-  motion,
-  useAnimationFrame,
-  useInView,
-  useMotionValue,
-  useScroll,
-  useSpring,
-  useTransform,
-  useVelocity,
-  wrap,
-} from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/cn";
 
 type VelocityMarqueeProps = {
   children: React.ReactNode;
-  /** Base speed, in percent of one copy per second. Negative runs right to left. */
-  speed?: number;
+  /** Seconds for one full pass at rest. */
+  seconds?: number;
   className?: string;
 };
 
 const COPIES = 4;
 
 /**
- * An endless ticker that speeds up with the scroll and flips direction when
- * you scroll back up. Idle while off screen.
+ * An endless ticker that speeds up with the scroll and runs backwards when you
+ * scroll back up.
+ *
+ * The movement is a single looping animation that the browser runs on its compositor,
+ * so it costs nothing per frame. Scrolling only nudges its playback rate. It pauses
+ * whenever it is off screen.
  */
-export function VelocityMarquee({ children, speed = -3.5, className }: VelocityMarqueeProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { margin: "100px" });
+export function VelocityMarquee({ children, seconds = 26, className }: VelocityMarqueeProps) {
+  const track = useRef<HTMLDivElement>(null);
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
 
-  const baseX = useMotionValue(0);
-  const { scrollY } = useScroll();
-  const velocity = useVelocity(scrollY);
-  const smoothVelocity = useSpring(velocity, { damping: 50, stiffness: 400 });
-  const factor = useTransform(smoothVelocity, [0, 1000], [0, 4], { clamp: false });
-  const direction = useRef(1);
+  useEffect(() => {
+    const el = track.current;
+    if (!el || reduced || typeof el.animate !== "function") return;
 
-  // One copy is 100 / COPIES percent of the track, so wrapping there is seamless.
-  const x = useTransform(baseX, (v) => `${wrap(-100 / COPIES, 0, v)}%`);
+    // One copy is 100 / COPIES percent of the track, so looping there is seamless.
+    const animation = el.animate(
+      [{ transform: "translateX(0%)" }, { transform: `translateX(-${100 / COPIES}%)` }],
+      { duration: seconds * 1000, iterations: Infinity, easing: "linear" },
+    );
+    animation.pause();
 
-  useAnimationFrame((_, delta) => {
-    if (!inView || reduced) return;
-    const f = factor.get();
-    if (f < 0) direction.current = -1;
-    else if (f > 0) direction.current = 1;
-    let moveBy = direction.current * speed * (delta / 1000);
-    moveBy += direction.current * moveBy * Math.abs(f);
-    baseX.set(baseX.get() + moveBy);
-  });
+    let visible = false;
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) animation.play();
+      else animation.pause();
+    });
+    io.observe(el);
+
+    let lastY = window.scrollY;
+    let lastT = performance.now();
+    let direction = 1;
+    let settle = 0;
+    const onScroll = () => {
+      const now = performance.now();
+      const dy = window.scrollY - lastY;
+      const dt = Math.max(16, now - lastT);
+      lastY = window.scrollY;
+      lastT = now;
+      if (!visible || dy === 0) return;
+      direction = dy < 0 ? -1 : 1;
+      const boost = Math.min(5, (Math.abs(dy) / dt) * 2.4);
+      animation.updatePlaybackRate(direction * (1 + boost));
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => animation.updatePlaybackRate(direction), 160);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(settle);
+      io.disconnect();
+      animation.cancel();
+    };
+  }, [reduced, seconds]);
 
   return (
-    <div ref={ref} className={cn("overflow-hidden", className)} aria-hidden="true">
-      <motion.div className="flex w-max flex-nowrap whitespace-nowrap will-change-transform" style={{ x }}>
+    <div className={cn("overflow-hidden", className)} aria-hidden="true">
+      <div ref={track} className="flex w-max flex-nowrap whitespace-nowrap will-change-transform">
         {Array.from({ length: COPIES }, (_, i) => (
           <div key={i} className="flex shrink-0 items-center">
             {children}
           </div>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

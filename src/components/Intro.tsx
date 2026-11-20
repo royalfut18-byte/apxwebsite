@@ -1,89 +1,124 @@
 "use client";
 
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { ease } from "@/lib/cn";
+import { cn, ease } from "@/lib/cn";
 
-import { Logo } from "./Logo";
+import { Logo, PeakMark } from "./Logo";
 import { useIntro } from "./providers/IntroProvider";
 
 /**
  * The opening sequence.
  *
  * Four words (what APX does) flick past while a counter climbs, the wordmark draws
- * itself on, then two curtains lift: ink first, with a band of ember behind it,
- * like first light. The wordmark does not fade out. It flies up into the header and
- * becomes the logo (it shares a `layoutId` with the one in <Nav />).
+ * itself, then two curtains lift: ink first, with a band of ember behind it, like first
+ * light. The wordmark does not fade out. It flies up into the header and becomes the
+ * logo (it shares a `layoutId` with the one in <Nav />).
  *
- * Returning visitors in the same tab, and anyone on a slow connection, get a short
- * version: wordmark, then lift.
+ * Four things keep it dependable, slow phones and old laptops included:
+ *
+ *  - The curtain is part of the page's HTML, so it is there from the first paint, and
+ *    CSS alone keeps it alive (see "Intro" in globals.css) until the scripts arrive.
+ *  - Everything that moves is a transform or an opacity, which Framer Motion hands to
+ *    the browser's compositor. It keeps running even when the page itself is busy.
+ *  - The steps are chained: each one waits for the previous one to have been on screen,
+ *    so a slow start can delay the sequence but can never skip part of it.
+ *  - Each step also waits for a frame to be drawn, which only happens while the tab is
+ *    being looked at. A page opened in a background tab holds its intro until then.
+ *
+ * Visitors who ask for reduced motion get the same sequence with nothing travelling:
+ * the words cross-fade, the wordmark simply appears, and the curtain fades away.
  */
 
 const WORDS = ["Websites", "SEO", "Instagram", "Tools"];
-const WORD_MS = 340;
-const START_MS = 180;
-const LOGO_DRAW_MS = 980;
-const HOLD_MS = 260;
-const SEEN_KEY = "apx:intro";
-const FONT_WAIT_MS = 900;
-const SLOW_LOAD_MS = 3000;
+const WORD_MS = 370;
+const LOGO_MS = 1000;
+const HOLD_MS = 240;
+const FONT_WAIT_MS = 500;
+const LIFT_S = 1;
 
-// The curtain's bottom edge. At rest it hangs below the screen in a curve; as the
-// curtain lifts the curve flattens, so the middle appears to trail behind.
-const HANG = "M0 0 H100 V100 Q50 132 0 100 Z";
-const FLAT = "M0 0 H100 V100 Q50 100 0 100 Z";
+const UP = "translateY(-105%)";
+const REST = "translateY(0%)";
+const BELOW = "translateY(105%)";
+
+/** One of the two curtains. Its lower edge hangs in a curve that flattens as it lifts. */
+function Sheet({
+  className,
+  delay,
+  lift,
+  children,
+}: {
+  className: string;
+  delay: number;
+  /** False for reduced motion, where the curtain fades instead of moving. */
+  lift: boolean;
+  children?: React.ReactNode;
+}) {
+  const transition = { duration: LIFT_S, ease: ease.swift, delay };
+  return (
+    <motion.div
+      className={cn("absolute inset-0", className)}
+      initial={{ transform: REST }}
+      exit={lift ? { transform: "translateY(-100%)" } : undefined}
+      transition={transition}
+    >
+      {children}
+      <motion.span
+        aria-hidden="true"
+        className="absolute left-0 top-full block h-[16vh] w-full origin-top bg-inherit [border-radius:0_0_50%_50%/0_0_100%_100%]"
+        initial={{ transform: "scaleY(1)" }}
+        exit={lift ? { transform: "scaleY(0)" } : undefined}
+        transition={transition}
+      />
+    </motion.div>
+  );
+}
 
 export function Intro() {
-  const { phase, skipped, setPhase } = useIntro();
+  const { phase, skipped, reduced, setPhase } = useIntro();
+  // -1 before the scripts take over, then one step per word, then the wordmark.
   const [step, setStep] = useState(-1);
-  // Read once and remembered, so a development double-mount cannot flip it.
-  const seenBefore = useRef<boolean | null>(null);
   const count = useMotionValue(0);
   const digits = useTransform(count, (v) => String(Math.round(v)).padStart(3, "0"));
-  const bar = useTransform(count, (v) => v / 100);
+  const bar = useTransform(count, (v) => `scaleX(${v / 100})`);
 
   useEffect(() => {
     if (phase !== "intro") return;
 
-    if (seenBefore.current === null) {
-      seenBefore.current = false;
-      try {
-        seenBefore.current = window.sessionStorage.getItem(SEEN_KEY) === "1";
-        window.sessionStorage.setItem(SEEN_KEY, "1");
-      } catch {
-        // Storage can be blocked. The full intro is a fine fallback.
-      }
-    }
-    // Play the short version (wordmark only) for anyone who has already seen the full one in
-    // this tab, and for anyone whose page was slow to load: they have waited long enough.
-    const seen = seenBefore.current || performance.now() > SLOW_LOAD_MS;
+    // From here the scripts are in charge: this switches off the CSS-only safety net.
+    document.documentElement.classList.add("intro-live");
 
-    const timers: number[] = [];
-    let counter: ReturnType<typeof animate> | undefined;
     let cancelled = false;
+    let counter: ReturnType<typeof animate> | undefined;
+    const timers: number[] = [];
+    const wait = (ms: number) => new Promise<void>((done) => timers.push(window.setTimeout(done, ms)));
+    const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
 
-    function run() {
+    (async () => {
+      // Give the display face a moment to arrive, then begin on a painted frame so a busy
+      // start-up cannot swallow the first word.
+      await Promise.race([document.fonts?.ready ?? Promise.resolve(), wait(FONT_WAIT_MS)]);
+      await frame();
+      await frame();
       if (cancelled) return;
-      const wordsEnd = seen ? 120 : START_MS + WORDS.length * WORD_MS;
-      const revealAt = wordsEnd + LOGO_DRAW_MS + HOLD_MS;
 
-      if (!seen) {
-        WORDS.forEach((_, i) => {
-          timers.push(window.setTimeout(() => setStep(i), START_MS + i * WORD_MS));
-        });
+      const total = WORDS.length * WORD_MS + LOGO_MS + HOLD_MS;
+      counter = animate(count, 100, { duration: total / 1000, ease: ease.inOut });
+
+      for (let i = 0; i < WORDS.length; i++) {
+        setStep(i);
+        await wait(WORD_MS);
+        await frame();
+        if (cancelled) return;
       }
-      timers.push(window.setTimeout(() => setStep(WORDS.length), wordsEnd));
-      timers.push(window.setTimeout(() => setPhase("reveal"), revealAt));
 
-      counter = animate(count, 100, { duration: (revealAt - 80) / 1000, ease: ease.inOut });
-    }
-
-    // Hold the first word until the display face has arrived, so it never flashes in a
-    // fallback font. Capped, so a slow font can only cost a moment.
-    const fonts = document.fonts?.ready ?? Promise.resolve();
-    const cap = new Promise<void>((resolve) => timers.push(window.setTimeout(resolve, FONT_WAIT_MS)));
-    void Promise.race([fonts, cap]).then(run);
+      setStep(WORDS.length);
+      await wait(LOGO_MS + HOLD_MS);
+      await frame();
+      if (cancelled) return;
+      setPhase("reveal");
+    })();
 
     return () => {
       cancelled = true;
@@ -94,9 +129,10 @@ export function Intro() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const word = step >= 0 && step < WORDS.length ? WORDS[step] : null;
   const showLogo = phase === "intro" && step >= WORDS.length;
 
-  // Bypassed (reduced motion, a deep link, any page but the home page): just get out of the way.
+  // No intro at all on this page load (a deep link, or a page other than home).
   if (skipped) return null;
 
   return (
@@ -108,67 +144,37 @@ export function Intro() {
             className="intro-root pointer-events-auto fixed inset-0 z-50"
             role="status"
             aria-label="Loading APX"
+            exit={reduced ? { opacity: 0 } : undefined}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           >
             {/* Ember curtain: trails the ink one by a beat. */}
-            <motion.div
-              className="absolute inset-0"
-              exit={{ y: "-100vh" }}
-              transition={{ duration: 1, ease: ease.swift, delay: 0.16 }}
-            >
-              <svg
-                className="absolute left-0 top-0 h-[132vh] w-full"
-                viewBox="0 0 100 132"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <motion.path
-                  fill="var(--color-ember)"
-                  initial={{ d: HANG }}
-                  exit={{ d: FLAT }}
-                  transition={{ duration: 1, ease: ease.swift, delay: 0.16 }}
-                />
-              </svg>
-            </motion.div>
+            <Sheet className="bg-ember" delay={0.15} lift={!reduced} />
 
-            {/* Ink curtain. */}
-            <motion.div
-              className="absolute inset-0"
-              exit={{ y: "-100vh" }}
-              transition={{ duration: 1, ease: ease.swift }}
-            >
-              <svg
-                className="absolute left-0 top-0 h-[132vh] w-full"
-                viewBox="0 0 100 132"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <motion.path
-                  fill="var(--color-ink)"
-                  initial={{ d: HANG }}
-                  exit={{ d: FLAT }}
-                  transition={{ duration: 1, ease: ease.swift }}
-                />
-              </svg>
+            <Sheet className="bg-ink" delay={0} lift={!reduced}>
+              {/* Everything on the curtain leaves with it. Nothing here fades: text that is
+                  never caught half-transparent is text that always passes a contrast check. */}
+              <div className="absolute inset-0">
+                {/* Shown by CSS only if the scripts are slow to arrive (see globals.css). */}
+                <div className="intro-mark absolute inset-0 grid place-items-center" aria-hidden="true">
+                  <PeakMark className="h-11 w-11 text-bone" />
+                </div>
 
-              <motion.div
-                className="absolute inset-0"
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-              >
                 {/* The four words */}
                 <div className="absolute inset-0 grid place-items-center" aria-hidden="true">
-                  <div className="relative h-[1.15em] w-full overflow-hidden text-center text-[clamp(2.75rem,9vw,7.5rem)] display">
-                    <AnimatePresence initial={false}>
-                      {step >= 0 && step < WORDS.length && (
+                  <div className="display relative h-[1.15em] w-full overflow-hidden text-center text-[clamp(2.75rem,9vw,7.5rem)]">
+                    <AnimatePresence initial={false} mode={reduced ? "wait" : "sync"}>
+                      {word && (
                         <motion.span
-                          key={WORDS[step]}
-                          className="absolute inset-x-0 top-0 block leading-[1.15]"
-                          initial={{ y: "105%" }}
-                          animate={{ y: "0%" }}
-                          exit={{ y: "-105%" }}
-                          transition={{ duration: 0.42, ease: ease.expo }}
+                          key={word}
+                          className="intro-word absolute inset-x-0 top-0 block leading-[1.15]"
+                          initial={reduced ? { opacity: 0 } : { transform: BELOW }}
+                          animate={reduced ? { opacity: 1 } : { transform: REST }}
+                          exit={reduced ? { opacity: 0, transition: { duration: 0.12 } } : { transform: UP }}
+                          transition={
+                            reduced ? { duration: 0.2, ease: "easeOut" } : { duration: 0.45, ease: ease.expo }
+                          }
                         >
-                          {WORDS[step]}
+                          {word}
                         </motion.span>
                       )}
                     </AnimatePresence>
@@ -178,19 +184,25 @@ export function Intro() {
                 {/* Footer row: caption, counter, progress hairline */}
                 <div className="shell absolute inset-x-0 bottom-0 pb-7 md:pb-9">
                   <div className="flex items-end justify-between">
-                    <p className="label text-mute">
-                      APX <span className="mx-2 text-faint">/</span> Web studio
+                    <p className="label flex items-center gap-2.5 text-mute">
+                      <span className="pulse-dot block h-1.5 w-1.5 rounded-full bg-ember" />
+                      APX <span className="text-faint">/</span> Web studio
                     </p>
                     <motion.span className="font-mono text-[clamp(1.5rem,3.2vw,2.5rem)] font-medium leading-none tabular-nums tracking-tight text-bone">
                       {digits}
                     </motion.span>
                   </div>
-                  <div className="mt-5 h-px w-full bg-white/10">
-                    <motion.div className="h-px origin-left bg-ember" style={{ scaleX: bar }} />
+                  <div className="relative mt-5 h-px w-full bg-white/10">
+                    {/* Creeps along under CSS alone, so the screen is never still. */}
+                    <div className="intro-creep absolute inset-0 origin-left bg-white/25" />
+                    <motion.div
+                      className="absolute inset-0 origin-left bg-ember"
+                      style={{ transform: bar }}
+                    />
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </div>
+            </Sheet>
           </motion.div>
         )}
       </AnimatePresence>
@@ -199,7 +211,7 @@ export function Intro() {
       {showLogo && (
         <div className="intro-root pointer-events-none fixed inset-0 z-[65] grid place-items-center">
           <motion.div layoutId="apx-logo" className="w-[clamp(11rem,28vw,23rem)] text-bone">
-            <Logo draw className="block h-auto w-full" />
+            <Logo draw={!reduced} className="block h-auto w-full" />
           </motion.div>
         </div>
       )}

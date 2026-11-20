@@ -6,7 +6,7 @@ const WORDS = ["Websites", "SEO", "Instagram", "Custom tools"];
 export function Ticker() {
   return (
     <div className="border-b border-white/[0.07] py-7 md:py-10">
-      <VelocityMarquee>
+      <VelocityMarquee seconds={30}>
         {WORDS.map((word, i) => (
           <span key={word} className="flex items-center">
             <span

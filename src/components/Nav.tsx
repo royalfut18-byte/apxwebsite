@@ -9,7 +9,6 @@ import { nav, site } from "@/lib/site";
 
 import { Logo } from "./Logo";
 import { useIntro } from "./providers/IntroProvider";
-import { scroller } from "./providers/SmoothScroll";
 import { Magnetic } from "./ui/Magnetic";
 
 // Header items drop in behind a wipe rather than fading, so they are opaque from the first frame.
@@ -44,7 +43,6 @@ export function Nav() {
   // Mobile menu: lock the page behind it, keep keyboard focus inside it, close on Escape.
   useEffect(() => {
     if (!open) return;
-    scroller.current?.stop();
     document.documentElement.classList.add("is-locked");
 
     const onKey = (e: KeyboardEvent) => {
@@ -76,7 +74,6 @@ export function Nav() {
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      scroller.current?.start();
       document.documentElement.classList.remove("is-locked");
       window.removeEventListener("keydown", onKey);
     };
@@ -101,10 +98,8 @@ export function Nav() {
         transition={{ duration: 0.55, ease: ease.expo }}
       >
         <div
-          className={`absolute inset-0 -z-10 border-b transition-[background-color,border-color,backdrop-filter] duration-500 ${
-            scrolled && !open
-              ? "border-white/[0.07] bg-ink/70 backdrop-blur-xl backdrop-saturate-150"
-              : "border-transparent bg-transparent"
+          className={`absolute inset-0 -z-10 border-b transition-[background-color,border-color] duration-500 ${
+            scrolled && !open ? "border-white/[0.07] bg-ink/90" : "border-transparent bg-transparent"
           }`}
         />
 
@@ -222,7 +217,7 @@ export function Nav() {
           >
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-24 top-1/4 h-80 w-80 rounded-full bg-ember/25 blur-[100px]"
+              className="pointer-events-none absolute -right-56 top-[calc(25%-8rem)] h-[36rem] w-[36rem] bg-[radial-gradient(closest-side,rgba(255,91,46,0.18),rgba(255,91,46,0.155)_30%,rgba(255,91,46,0.09)_55%,rgba(255,91,46,0.035)_80%,transparent)]"
             />
             <nav aria-label="Mobile" className="shell relative mt-28 flex-1">
               <ul>
