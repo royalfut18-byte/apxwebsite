@@ -8,7 +8,7 @@ import { useId } from "react";
  *
  * Each letter is a single stroked path clipped to a flat cap-height and baseline,
  * so the same geometry can be drawn on (the intro) or shown solid (everywhere else).
- * The A has no crossbar: it is the peak, and its tip carries the ember accent.
+ * The A has no crossbar, and its tip carries the ember accent.
  */
 
 const LETTERS = [
@@ -79,7 +79,7 @@ export function Logo({ className, draw = false, delay = 0, play = true, title = 
         )}
       </g>
 
-      {/* Ember tip of the peak */}
+      {/* Ember tip of the A */}
       <g clipPath={`url(#${tipId})`}>
         {draw ? (
           <motion.path
@@ -99,8 +99,8 @@ export function Logo({ className, draw = false, delay = 0, play = true, title = 
   );
 }
 
-/** Just the peak, for small marks and the favicon. */
-export function PeakMark({ className }: { className?: string }) {
+/** Just the A, for small marks and the favicon. */
+export function Mark({ className }: { className?: string }) {
   const uid = useId().replace(/:/g, "");
   return (
     <svg viewBox="0 0 56 56" className={className} aria-hidden="true" fill="none" overflow="hidden">

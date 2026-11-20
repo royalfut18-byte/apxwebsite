@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { site } from "@/lib/site";
 
-import { Terrain } from "../Terrain";
+import { Aurora } from "../Aurora";
 import { Reveal } from "../ui/Reveal";
 import { RevealText } from "../ui/RevealText";
 import { ContactForm } from "./ContactForm";
@@ -13,25 +13,26 @@ import { ContactForm } from "./ContactForm";
 export function Contact() {
   const ref = useRef<HTMLElement>(null);
   const near = useInView(ref, { margin: "200px" });
-  // The map is a second WebGL scene. It is not created until the visitor gets close.
+  // The glow is not created until the visitor gets close.
   const arrived = useInView(ref, { margin: "600px", once: true });
 
   return (
     <section ref={ref} id="contact" aria-labelledby="contact-title" className="relative overflow-hidden">
-      {/* The same mountain as the hero, now seen from directly above: you are at the top. */}
+      {/* The same light as the hero, low behind the form. */}
       <div aria-hidden="true" className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(50%_50%_at_26%_42%,rgba(255,91,46,0.16)_0%,rgba(255,91,46,0)_70%)]" />
         {arrived ? (
-          <Terrain
-            view="map"
+          <Aurora
+            className="absolute inset-0"
+            seed={3}
+            focus={[0.5, 0.8]}
+            reach={[0.9, 0.6]}
+            gain={0.8}
             active={near}
-            detail={0.65}
-            maxFps={30}
-            className="absolute inset-0 h-full w-full opacity-55"
           />
         ) : null}
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,var(--color-ink)_0%,rgba(7,7,8,0)_22%,rgba(7,7,8,0)_70%,var(--color-ink)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(42%_46%_at_24%_58%,rgba(7,7,8,0.78)_0%,rgba(7,7,8,0)_100%)]" />
+        <div className="grain absolute inset-0" />
+        {/* Dark behind the headline, and fading out again before the footer. */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,var(--color-ink)_0%,rgba(7,7,8,0.5)_34%,rgba(7,7,8,0)_62%,rgba(7,7,8,0)_80%,var(--color-ink)_100%)]" />
       </div>
 
       <div className="shell relative py-28 md:py-44">

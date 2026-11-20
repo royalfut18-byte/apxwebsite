@@ -91,7 +91,7 @@ export const services: {
 export const processSteps = [
   {
     index: "01",
-    title: "Scout",
+    title: "Discover",
     body: "We start with your business: what you sell, who buys it, and who you're up against on Google.",
   },
   {
@@ -106,13 +106,7 @@ export const processSteps = [
   },
   {
     index: "04",
-    title: "Climb",
-    body: "Launch is the start, not the finish. SEO, Instagram and tools keep you moving up.",
+    title: "Grow",
+    body: "Launch is the start, not the finish. SEO, Instagram and tools keep the enquiries coming.",
   },
 ] as const;
-
-/**
- * The altitude readout tops out at 2,228 m: the height of Mt Kosciuszko,
- * the highest point on the Australian mainland.
- */
-export const SUMMIT_METRES = 2228;

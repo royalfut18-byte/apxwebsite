@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { useIsClient } from "@/hooks/useIsClient";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { nav, site, SUMMIT_METRES } from "@/lib/site";
+import { nav, site } from "@/lib/site";
 
 import { Logo } from "../Logo";
 import { scrollToTarget } from "@/lib/scroll";
@@ -109,15 +109,12 @@ export function Footer() {
             <span className="mx-3 text-faint">/</span>
             <LocalTime />
           </p>
-          <p className="label text-mute">
-            {SUMMIT_METRES.toLocaleString("en-AU")} m: as high as mainland Australia goes
-          </p>
           <button
             type="button"
             onClick={() => scrollToTarget(0)}
             className="label group flex w-fit items-center gap-2 text-mute transition-colors duration-300 hover:text-bone"
           >
-            Back to base
+            Back to top
             <svg
               viewBox="0 0 12 12"
               className="h-3 w-3 transition-transform duration-500 ease-[var(--ease-expo)] group-hover:-translate-y-1"

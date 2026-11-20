@@ -5,15 +5,15 @@ import { useEffect, useState } from "react";
 
 import { cn, ease } from "@/lib/cn";
 
-import { Logo, PeakMark } from "./Logo";
+import { Logo, Mark } from "./Logo";
 import { useIntro } from "./providers/IntroProvider";
 
 /**
  * The opening sequence.
  *
  * Four words (what APX does) flick past while a counter climbs, the wordmark draws
- * itself, then two curtains lift: ink first, with a band of ember behind it, like first
- * light. The wordmark does not fade out. It flies up into the header and becomes the
+ * itself, then two curtains lift: ink first, with a band of colour behind it. The
+ * wordmark does not fade out. It flies up into the header and becomes the
  * logo (it shares a `layoutId` with the one in <Nav />).
  *
  * Four things keep it dependable, slow phones and old laptops included:
@@ -147,8 +147,12 @@ export function Intro() {
             exit={reduced ? { opacity: 0 } : undefined}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            {/* Ember curtain: trails the ink one by a beat. */}
-            <Sheet className="bg-ember" delay={0.15} lift={!reduced} />
+            {/* A curtain of colour trails the ink one by a beat: the same light as the hero. */}
+            <Sheet
+              className="bg-[linear-gradient(to_right,var(--color-violet),var(--color-rose)_45%,var(--color-ember))]"
+              delay={0.15}
+              lift={!reduced}
+            />
 
             <Sheet className="bg-ink" delay={0} lift={!reduced}>
               {/* Everything on the curtain leaves with it. Nothing here fades: text that is
@@ -156,7 +160,7 @@ export function Intro() {
               <div className="absolute inset-0">
                 {/* Shown by CSS only if the scripts are slow to arrive (see globals.css). */}
                 <div className="intro-mark absolute inset-0 grid place-items-center" aria-hidden="true">
-                  <PeakMark className="h-11 w-11 text-bone" />
+                  <Mark className="h-11 w-11 text-bone" />
                 </div>
 
                 {/* The four words */}

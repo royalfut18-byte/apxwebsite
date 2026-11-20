@@ -20,8 +20,10 @@
   /* The quietest text colour. Still clears 4.5:1 on every dark surface. */
   --color-faint: #807d77;
 
-  /* Ember: the one accent. First light on the summit. */
+  /* Ember: the accent. Rose and violet join it only in the glows and the intro curtain. */
   --color-ember: #ff5b2e;
+  --color-rose: #ff3d7f;
+  --color-violet: #7a45ff;
   --color-ember-deep: #e5451b;
   --color-ember-soft: #ffb49b;
   /* Ember for small text on the light section, where the bright one is too faint to read. */
@@ -191,13 +193,30 @@ html.is-locked body {
     margin-top: -100vh;
     margin-top: -100svh;
   }
+  /* Inside the frame: the copy on top, and the wall of work in whatever height is left. */
+  .hero-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+  .hero-wall {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+    /* Lets the wall size itself from the height it has been given (the cqh unit below). */
+    container-type: size;
+  }
 
   /*
-   * On very short viewports (a phone on its side, a tiny phone with browser bars showing)
-   * the hero's copy is taller than the screen. There it stops pinning and simply flows,
-   * so nothing can ever be cut off.
+   * On phones, and on very short screens, the hero does not pin. It simply flows, as tall
+   * as its content needs, so nothing can ever be squeezed or cut off.
    */
-  @media (max-height: 600px) {
+  @media (max-width: 767px), (max-height: 600px) {
     .hero-track {
       height: auto;
     }
@@ -210,6 +229,205 @@ html.is-locked body {
     .hero-follow {
       margin-top: 0;
     }
+    .hero-wall {
+      flex: none;
+      margin-block: auto;
+      container-type: normal;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+     The wall of work: screens standing in a ring that turns (see Showcase.tsx).
+     Everything is sized from one number, the width of a screen.
+     --------------------------------------------------------------------------- */
+  .wall {
+    --w: min(70vw, 34svh, 24rem);
+    /* How far each screen stands from the axis: edge to edge, plus a small gap. */
+    --r: calc(var(--w) * var(--spread) + 0.75rem);
+    position: relative;
+    height: calc(var(--w) * 0.7);
+    perspective: calc(var(--w) * 3.3);
+    perspective-origin: 50% 28%;
+    /* The vanishing point follows the mouse (Showcase.tsx). This is what smooths it. */
+    transition: perspective-origin 0.9s var(--ease-quart);
+    /* Up and down still scrolls the page; side to side turns the wall. */
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .wall[data-dragging] {
+    cursor: grabbing;
+  }
+  @media (min-width: 768px) and (max-height: 600px) {
+    .wall {
+      --w: min(34vw, 62svh);
+    }
+  }
+  @media (min-width: 768px) and (min-height: 601px) {
+    .wall {
+      /* How wide a screen may be: under a third of a landscape window, over half of a portrait one. */
+      --fit: 30vw;
+      --w: clamp(12rem, min(var(--fit), 40svh), 46rem);
+    }
+    /*
+     * Better: exactly as large as the space under the copy allows. 100cqh is the height
+     * of the area the wall sits in; 3rem of that is the caption, and a screen is 0.7 times
+     * as tall as it is wide.
+     */
+    @supports (width: 1cqh) {
+      .wall {
+        --w: clamp(11rem, min(var(--fit), (100cqh - 3rem) * 1.4286), 46rem);
+      }
+    }
+  }
+  @media (min-width: 768px) and (min-height: 601px) and (max-aspect-ratio: 1/1) {
+    .wall {
+      --fit: 58vw;
+    }
+  }
+
+  /* Turned by pushes and by hand (Showcase.tsx), about the same axis as the ring inside it. */
+  .wall-spin {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 50% calc(var(--r) * -1);
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  /* The steady turn. */
+  .wall-ring {
+    position: absolute;
+    inset: 0;
+    transform: translateZ(calc(var(--r) * -1));
+    transform-style: preserve-3d;
+    animation: wall-turn 96s linear infinite;
+    will-change: transform;
+  }
+  .wall-screen {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--w);
+    margin-left: calc(var(--w) / -2);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  /* One browser window. It rises into place when the intro lifts. */
+  .wall-rise {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.13);
+    border-radius: calc(var(--w) * 0.03);
+    background: var(--color-ink-800);
+    box-shadow: 0 calc(var(--w) * 0.09) calc(var(--w) * 0.16) calc(var(--w) * -0.07) rgb(0 0 0 / 0.8);
+    /* A faint reflection, as if the screens stood on a polished floor. (Not in Firefox,
+       which has no equivalent; nothing is lost there but the shine.) */
+    -webkit-box-reflect: below calc(var(--w) * 0.012)
+      linear-gradient(to bottom, rgb(0 0 0 / 0) 62%, rgb(0 0 0 / 0.26) 100%);
+    opacity: 0;
+    transform: translateY(24%) scale(0.9);
+    transition:
+      opacity 0.8s ease-out,
+      transform 1.5s var(--ease-expo);
+    transition-delay: calc(var(--order) * 80ms + 250ms);
+  }
+  .wall[data-show] .wall-rise {
+    opacity: 1;
+    transform: none;
+  }
+  .wall-bar {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--w) * 0.012);
+    height: calc(var(--w) * 0.062);
+    padding: 0 calc(var(--w) * 0.028);
+    background: #131315;
+  }
+  .wall-bar i {
+    width: calc(var(--w) * 0.017);
+    height: calc(var(--w) * 0.017);
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.2);
+  }
+  .wall-bar span {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: calc(var(--w) * 0.036);
+    margin-left: calc(var(--w) * 0.02);
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.07);
+    color: rgb(255 255 255 / 0.55);
+    font-family: var(--font-mono);
+    /* Too small to read on a phone-sized wall, so the address is only shown on larger ones. */
+    font-size: 0;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  @media (min-width: 768px) {
+    .wall-bar span {
+      font-size: calc(var(--w) * 0.021);
+    }
+  }
+  /* Laid over the wall and the glow: the screens at either end turn away into the dark. */
+  .hero-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      var(--color-ink) 0%,
+      rgb(7 7 8 / 0) 13%,
+      rgb(7 7 8 / 0) 87%,
+      var(--color-ink) 100%
+    );
+  }
+  /* Laid over the glow only: dark behind the words, clearing where the wall begins. */
+  .hero-scrim {
+    background: linear-gradient(to bottom, var(--color-ink) 0%, rgb(7 7 8 / 0.9) 38%, rgb(7 7 8 / 0) 74%);
+  }
+  @media (min-width: 768px) {
+    .hero-vignette {
+      background: linear-gradient(
+        to right,
+        var(--color-ink) 0%,
+        rgb(7 7 8 / 0.6) 10%,
+        rgb(7 7 8 / 0) 27%,
+        rgb(7 7 8 / 0) 73%,
+        rgb(7 7 8 / 0.6) 90%,
+        var(--color-ink) 100%
+      );
+    }
+    .hero-scrim {
+      background: linear-gradient(to bottom, var(--color-ink) 0%, rgb(7 7 8 / 0.86) 26%, rgb(7 7 8 / 0) 60%);
+    }
+  }
+  .wall-caption {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: fit-content;
+    max-width: calc(100% - 2.5rem);
+    height: 2rem;
+    margin: 1rem auto 0;
+    padding: 0 0.95rem;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 9999px;
+    background: rgb(11 11 13 / 0.88);
+    animation: wall-caption 0.6s var(--ease-expo) both;
+  }
+
+  /* Film grain over the glows: hides the banding that soft gradients show on dark screens. */
+  .grain {
+    background-image: url("/grain.png");
+    background-size: 96px 96px;
+    opacity: 0.045;
+    pointer-events: none;
   }
 
   /* A soft ring that pulses out of a dot. Only transform and opacity move. */
@@ -268,6 +486,21 @@ html.is-locked body {
    <html>, which hands everything over to it.
    --------------------------------------------------------------------------- */
 
+@keyframes wall-turn {
+  from {
+    transform: translateZ(calc(var(--r) * -1)) rotateY(0deg);
+  }
+  to {
+    transform: translateZ(calc(var(--r) * -1)) rotateY(-360deg);
+  }
+}
+@keyframes wall-caption {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
 @keyframes intro-creep {
   from {
     transform: scaleX(0);
@@ -323,7 +556,16 @@ html.intro-live .intro-root {
   .intro-mark,
   .caret,
   .scroll-hint,
-  .pulse-dot::after {
+  .pulse-dot::after,
+  .wall-caption {
     animation: none;
+  }
+  /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
+  .wall-ring {
+    animation-play-state: paused;
+  }
+  .wall-rise {
+    transform: none;
+    transition: opacity 0.8s ease-out;
   }
 }

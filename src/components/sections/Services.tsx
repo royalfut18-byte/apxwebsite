@@ -69,7 +69,7 @@ function Stage({ service }: { service: (typeof services)[number] }) {
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(62%_58%_at_50%_100%,rgba(255,91,46,0.17),rgba(255,91,46,0.12)_30%,rgba(255,91,46,0.045)_62%,transparent)]"
+        className="absolute inset-0 bg-[radial-gradient(62%_58%_at_42%_100%,rgba(255,91,46,0.17),rgba(255,91,46,0.12)_30%,rgba(255,91,46,0.045)_62%,transparent),radial-gradient(46%_50%_at_86%_100%,rgba(122,69,255,0.16),rgba(122,69,255,0.06)_55%,transparent)]"
       />
       <div className="relative flex items-center justify-between px-5 pt-5 md:px-7 md:pt-6">
         <span className="label text-faint">Fig. {service.index}</span>

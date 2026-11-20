@@ -2,9 +2,9 @@
 
 The website for APX: websites, SEO, Instagram and custom tools for Australian businesses.
 
-One long page, built to show the kind of work APX does: a Framer Motion intro, a live 3D
-contour-line mountain behind the hero, animated demos of each service, and a portfolio of
-real, live client sites.
+One long page, built to show the kind of work APX does: a Framer Motion intro, a hero where
+real client sites stand in a slowly turning 3D ring over a flowing glow, animated demos of
+each service, and a portfolio of real, live client sites.
 
 ## Before you launch
 
@@ -59,6 +59,10 @@ structured data.
 3. Add an entry to `src/lib/projects.ts`, following the existing ones. `theme` sets the card's
    colours; take them from the client's own brand. `tint` is the flat colour each screen
    shows for the moment before its capture has loaded: use the page's background colour.
+4. To put the project on the hero's wall as well, cut a few 1280 x 800 screens out of the
+   desktop capture, save them in `src/assets/showcase/`, and add them to the list in
+   `src/lib/showcase.ts`. Any number of screens works (the ring spaces itself); keep
+   neighbours in the list from different clients.
 
 ## Contact form
 
@@ -94,13 +98,14 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
   home page. The curtain is part of the page's HTML, so it is on screen from the first
   paint, before any script has loaded. The wordmark shares a `layoutId` with the header
   logo, which is how it flies into place.
-- `src/components/Terrain.tsx`: the mountain. Raw WebGL2, one mesh and one shader, no 3D
-  library. The shape is computed once into a texture, so each frame is cheap. It pauses
-  when off screen, drops to 30 frames a second when nothing is moving, lowers its own
-  resolution on slow graphics hardware and, if that is not enough, holds a still frame.
-- `src/components/TerrainStill.tsx`: a picture of the mountain (in `src/assets/terrain/`),
-  shown where the live one cannot run: no WebGL2, or a browser with graphics acceleration
-  switched off.
+- `src/components/Showcase.tsx`: the hero's wall of work. Ordinary images placed in a ring
+  with CSS 3D, turned by a single CSS animation, so the graphics card does all of it and
+  it works before (or without) JavaScript. Script only changes the animation's speed or
+  position: when it is dragged, when the page scrolls, and for the spin it arrives with.
+- `src/components/Aurora.tsx`: the glow behind the hero, the contact form and the 404 page.
+  A small shader drawn at a fraction of its displayed size (soft light has no detail to
+  lose) at 30 frames a second, paused whenever it is off screen. Where there is no WebGL,
+  or no graphics acceleration, a still CSS gradient in the same colours shows instead.
 - `src/components/demos/`: the four small service animations. Each is only created when
   its stage is about to scroll into view, and only runs while it is on screen.
 - `src/components/sections/`: one file per section of the page.
@@ -113,8 +118,8 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
   graphics card, off the main thread, so they stay smooth while the page is busy. With
   Framer Motion that means writing `animate={{ transform: "translateY(0px)" }}` rather
   than animating `height`, `top`, colours or using `layout`.
-- **Nothing runs when it cannot be seen.** The marquee, the demos and both 3D scenes stop
-  when they are off screen.
+- **Nothing runs when it cannot be seen.** The marquee, the demos, the wall of work and the
+  glows all stop when they are off screen.
 - **No blur filters, backdrop blurs or blend-mode overlays over large areas.** Glows are
   plain gradients. These effects look cheap to write and are expensive to draw, most of
   all on phones.
@@ -126,8 +131,9 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
 - **Accessibility**: real headings and landmarks, visible focus styles, a skip link, labelled
   form fields with inline errors, and support for the device's "reduce motion" setting.
   With it on, nothing travels across the screen: the intro and the headlines fade instead
-  of sliding, the mountain is a still, the marquee stops and the demos show their finished
-  state. If the site looks static on your own device, check that setting first.
+  of sliding, the wall of work stands still (it can still be turned by hand), the glow
+  holds one frame, the marquee stops and the demos show their finished state. If the site
+  looks static on your own device, check that setting first.
 - **Without JavaScript** the page still shows all of its content.
 - **SEO**: metadata, Open Graph image, structured data (`ProfessionalService`), sitemap,
   robots and a web manifest are generated from `src/lib/site.ts`.

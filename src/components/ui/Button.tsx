@@ -4,6 +4,8 @@ type ButtonProps = {
   href: string;
   children: React.ReactNode;
   variant?: "solid" | "ghost";
+  /** "compact" below 640px wide, where two buttons have to share a row. Full size above. */
+  size?: "full" | "compact";
   className?: string;
   external?: boolean;
   /** Label shown inside the cursor while hovering (desktop). */
@@ -20,7 +22,16 @@ const ARROW = (
  * The site's pill button. On hover the fill sweeps up from the bottom and the
  * arrow is replaced by a second one sliding in from below-left.
  */
-export function Button({ href, children, variant = "solid", className, external, cursor }: ButtonProps) {
+export function Button({
+  href,
+  children,
+  variant = "solid",
+  size = "full",
+  className,
+  external,
+  cursor,
+}: ButtonProps) {
+  const compact = size === "compact";
   return (
     <a
       href={href}
@@ -28,7 +39,10 @@ export function Button({ href, children, variant = "solid", className, external,
       data-cursor-label={cursor}
       {...(external ? { target: "_blank", rel: "noopener" } : {})}
       className={cn(
-        "group relative inline-flex h-14 shrink-0 items-center gap-4 overflow-hidden whitespace-nowrap rounded-full pl-7 pr-2 text-base font-semibold",
+        "group relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full font-semibold",
+        compact
+          ? "h-12 gap-2 pl-[1.1rem] pr-1.5 text-[0.9rem] sm:h-14 sm:gap-4 sm:pl-7 sm:pr-2 sm:text-base"
+          : "h-14 gap-4 pl-7 pr-2 text-base",
         variant === "solid" ? "bg-bone text-ink" : "border border-white/20 text-bone",
         className,
       )}
@@ -50,7 +64,8 @@ export function Button({ href, children, variant = "solid", className, external,
       </span>
       <span
         className={cn(
-          "relative grid h-10 w-10 place-items-center overflow-hidden rounded-full transition-colors duration-500",
+          "relative grid place-items-center overflow-hidden rounded-full transition-colors duration-500",
+          compact ? "h-9 w-9 sm:h-10 sm:w-10" : "h-10 w-10",
           variant === "solid"
             ? "bg-ink text-bone"
             : "bg-white/10 text-bone group-hover:bg-ink group-focus-visible:bg-ink",
