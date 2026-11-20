@@ -3,7 +3,6 @@
 import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ease } from "@/lib/cn";
 import { site } from "@/lib/site";
@@ -43,9 +42,9 @@ export function Hero() {
   const stage = useRef<HTMLDivElement>(null);
   const wall = useRef<HTMLDivElement>(null);
 
-  const flowing = useMediaQuery("(max-height: 600px)");
   const reduced = useReducedMotion();
-  const mode: Mode = flowing ? "flow" : reduced ? "pinned" : "showcase";
+  // The hero now simply scrolls with the page: never pinned, nothing slides over it.
+  const mode: Mode = "flow";
   const modeRef = useRef<Mode>(mode);
   useEffect(() => {
     modeRef.current = mode;
@@ -104,11 +103,16 @@ export function Hero() {
 
   // The copy clears away early in the showcase (or, without one, as the page slides over).
   const copyOpacity = useTransform([show, cover], ([s, c]: number[]) =>
-    modeRef.current === "showcase" ? 1 - clamp(s / 0.42) : 1 - clamp(c / 0.55),
+    modeRef.current === "showcase"
+      ? 1 - clamp(s / 0.42)
+      : modeRef.current === "pinned"
+        ? 1 - clamp(c / 0.55)
+        : 1,
   );
   const copyY = useTransform(
     [show, cover],
-    ([s, c]: number[]) => `${-(modeRef.current === "showcase" ? clamp(s / 0.6) * 9 : c * 16)}%`,
+    ([s, c]: number[]) =>
+      `${-(modeRef.current === "showcase" ? clamp(s / 0.6) * 9 : modeRef.current === "pinned" ? c * 16 : 0)}%`,
   );
   // Once it is gone it must not sit invisibly in the way of the wall underneath it.
   const copyEvents = useTransform(copyOpacity, (o) => (o < 0.2 ? "none" : "auto"));
@@ -121,7 +125,7 @@ export function Hero() {
   const billY = useTransform(show, (s) => `${(1 - smooth(clamp((s - 0.45) / 0.4))) * 1.5}rem`);
   // The dark behind the words lifts with them, and the light spreads up behind the wall.
   const scrimOpacity = useTransform(show, (s) => 1 - 0.8 * smooth(clamp(s / 0.7)));
-  const glowOpacity = useTransform(cover, [0, 0.9], [1, 0.3]);
+  const glowOpacity = useTransform(cover, [0, 0.9], [1, 1]);
 
   // The light leans a little toward the mouse.
   const pointer = useRef(0);

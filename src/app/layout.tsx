@@ -3,7 +3,6 @@ import { Geist_Mono, Instrument_Serif, Mona_Sans } from "next/font/google";
 
 import { Cursor } from "@/components/Cursor";
 import { Intro } from "@/components/Intro";
-import { MotionPrompt } from "@/components/MotionPrompt";
 import { Nav } from "@/components/Nav";
 import { IntroProvider } from "@/components/providers/IntroProvider";
 import { ScrollProgress } from "@/components/ScrollProgress";
@@ -142,7 +141,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             The last rule is for devices that ask for reduced motion: with no script to read
             that setting, it stops the few things CSS would otherwise keep moving. */}
         <noscript>
-          <style>{`.intro-root,.wall-caption{display:none!important}:root{--hero-screens:2!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}@media (prefers-reduced-motion:reduce){.wall-ring{animation-play-state:paused!important}.scroll-hint,.pulse-dot::after{animation:none!important}}`}</style>
+          <style>{`.intro-root,.wall-caption{display:none!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}@media (prefers-reduced-motion:reduce){.wall-ring{animation-play-state:paused!important}.scroll-hint,.pulse-dot::after{animation:none!important}}`}</style>
         </noscript>
 
         <a
@@ -158,7 +157,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ScrollProgress />
           <Cursor />
           {children}
-          <MotionPrompt />
         </IntroProvider>
       </body>
     </html>

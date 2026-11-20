@@ -25,14 +25,12 @@ const MAX_PUSH = 0.55;
 /** It arrives with a push worth this many degrees. */
 const ENTRANCE_DEG = 150;
 /** Scrolling the page by one pixel pushes it by this many degrees. */
-const SCROLL_DEG_PER_PX = 0.11;
-const HOVER_RATE = 0.3;
 
 type Control = { push: (degPerMs: number) => void; setTurning: (on: boolean) => void };
 
 /**
  * The hero's wall of work: real pages from live client sites, standing in a ring that
- * turns slowly. Drag it to spin it, scroll and it picks up speed, click a screen to bring
+ * turns slowly. Drag it to spin it, click a screen to bring
  * it round to the front (and the front one to see that project), and the caption names
  * the client facing you.
  *
@@ -40,7 +38,7 @@ type Control = { push: (degPerMs: number) => void; setTurning: (on: boolean) => 
  * draws all of it: no canvas, and no script running per frame.
  *
  *  - The steady turn is one CSS animation on the ring (it runs before, and without, JavaScript).
- *  - Everything on top of that (the spin it arrives with, a flick, a scroll) is a push: one
+ *  - Everything on top of that (the spin it arrives with, a flick) is a push: one
  *    eased animation on a wrapper around the ring, started once and left to the browser.
  *  - Dragging sets that wrapper's angle directly, once per pointer event.
  */
@@ -132,26 +130,6 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
     });
     io.observe(host);
 
-    // Scrolling pushes it, in the direction of the scroll. (Gathered up and applied at most
-    // twenty times a second: enough to feel immediate, without restarting the animation
-    // on every scroll event.)
-    let lastY = window.scrollY;
-    let owed = 0;
-    let timer = 0;
-    const onScroll = () => {
-      const dy = window.scrollY - lastY;
-      lastY = window.scrollY;
-      if (reduced || !onScreen || covered || dragging) return;
-      owed += dy;
-      if (timer) return;
-      timer = window.setTimeout(() => {
-        timer = 0;
-        const deg = Math.max(-70, Math.min(70, owed * SCROLL_DEG_PER_PX));
-        owed = 0;
-        if (deg) push(-deg / TAU);
-      }, 50);
-    };
-
     // Dragging turns it by hand.
     // (The wall may be drawn larger than it is laid out, in the hero's showcase: `getBoundingClientRect`
     // gives the size on screen, which is what a finger or mouse is moving across.)
@@ -235,7 +213,6 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
     const onEnter = (e: PointerEvent) => {
       if (e.pointerType !== "mouse" || reduced || hovering) return;
       hovering = true;
-      turn.updatePlaybackRate(HOVER_RATE);
     };
     const onLeave = (e: PointerEvent) => {
       if (e.pointerType !== "mouse" || !hovering) return;
@@ -266,7 +243,6 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
       setFront((was) => (was === index ? was : index));
     }, 250);
 
-    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pointermove", onLook, { passive: true });
     host.addEventListener("pointerdown", onDown);
     host.addEventListener("pointermove", onMove);
@@ -278,11 +254,9 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
     return () => {
       control.current = null;
       cancelAnimationFrame(look);
-      window.clearTimeout(timer);
       window.clearInterval(watch);
       io.disconnect();
       coast?.cancel();
-      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointermove", onLook);
       host.removeEventListener("pointerdown", onDown);
       host.removeEventListener("pointermove", onMove);

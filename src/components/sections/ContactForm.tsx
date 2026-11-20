@@ -67,8 +67,8 @@ function Field({
     "aria-invalid": error ? true : undefined,
     "aria-describedby": error ? errorId : undefined,
     className: cn(
-      "peer w-full border-0 border-b bg-transparent pb-3 pt-2 text-lg text-bone outline-none transition-colors duration-300 placeholder:text-faint md:text-xl",
-      error ? "border-ember" : "border-white/20 hover:border-white/40 focus:border-bone",
+      "peer mt-2.5 block w-full rounded-2xl border bg-white/[0.04] px-4 py-3.5 text-[1.0625rem] text-bone outline-none transition-[border-color,background-color,box-shadow] duration-300 placeholder:text-faint focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(255,91,46,0.16)] md:px-5 md:py-4 md:text-lg",
+      error ? "border-ember" : "border-white/10 hover:border-white/25 focus:border-ember",
     ),
   };
 
@@ -88,14 +88,6 @@ function Field({
       ) : (
         <input {...shared} type={type} onChange={(e) => onChange(e.target.value)} />
       )}
-      {/* Ember underline that wipes in on focus */}
-      <span
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-ember transition-transform duration-500 ease-[var(--ease-expo)] peer-focus:scale-x-100",
-          multiline && "bottom-[6px]",
-        )}
-      />
       <AnimatePresence>
         {error ? (
           <motion.p
@@ -200,7 +192,25 @@ export function ContactForm() {
   const firstName = enquiry.name.trim().split(/\s+/)[0];
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink-800/95 p-6 md:rounded-[2.25rem] md:p-10 lg:p-12">
+    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink-800 p-6 shadow-[0_40px_120px_-40px_rgba(255,91,46,0.35)] md:rounded-[2.25rem] md:p-10 lg:p-12">
+      {/* A line of the site's colours along the top edge, and a soft light under it. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(to_right,var(--color-violet),var(--color-rose)_45%,var(--color-ember))]"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(255,91,46,0.13),transparent)]"
+      />
+      <div className="relative mb-9 flex items-center justify-between gap-4 border-b border-white/10 pb-6">
+        <p className="display text-[clamp(1.5rem,2.4vw,2.1rem)] text-bone">
+          Tell us what you <span className="accent">need.</span>
+        </p>
+        <p className="label flex shrink-0 items-center gap-2.5 text-mute">
+          <span className="pulse-dot block h-1.5 w-1.5 rounded-full bg-ember" />
+          Taking projects
+        </p>
+      </div>
       <AnimatePresence mode="wait" initial={false}>
         {finished ? (
           <motion.div

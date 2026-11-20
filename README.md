@@ -109,12 +109,10 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 - `src/components/Showcase.tsx`: the hero's wall of work. Ordinary images placed in a ring
   with CSS 3D, turned by a single CSS animation, so the graphics card does all of it and
   it works before (or without) JavaScript. Everything on top of the steady turn (the spin
-  it arrives with, a flick, a scroll, a click that brings a screen round to the front) is
+  it arrives with, a flick, a click that brings a screen round to the front) is
   one eased animation handed to the browser, so no script runs per frame.
-- `src/components/sections/Hero.tsx`: pins the hero while the page scrolls and runs the
-  showcase: over the first screen of scrolling the copy clears and the wall rises to the
-  middle of the screen and grows, over the second the page slides up over it. The layout
-  side of this is in `globals.css` under `.hero-track`.
+- `src/components/sections/Hero.tsx`: the hero: the headline over the wall of work and the glow.
+  It is one screen tall and scrolls away with the page.
 - `src/components/Aurora.tsx`: the glow behind the hero, the contact form and the 404 page.
   A small shader drawn at a fraction of its displayed size (soft light has no detail to
   lose) at 30 frames a second, paused whenever it is off screen. Where there is no WebGL,
@@ -124,7 +122,7 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
   they sit on lean toward the mouse (`src/hooks/useTilt.ts`).
 - `src/components/ui/VelocityMarquee.tsx`: the moving rows of words (the two rows under the
   hero, which pass each other in opposite directions, and the band above the contact form).
-  One looping animation each, which speeds up and leans while the page scrolls.
+  One looping animation each, at one steady speed.
 - `src/components/sections/`: one file per section of the page.
 
 ### Keeping it fast
@@ -146,32 +144,19 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
 ### Built in
 
 - **Accessibility**: real headings and landmarks, visible focus styles, a skip link, labelled
-  form fields with inline errors, and a calm version of the page for anyone who wants less
-  movement (below).
+  form fields with inline errors, and a switch that stops the animations (below).
 - **Without JavaScript** the page still shows all of its content.
 - **SEO**: metadata, Open Graph image, structured data (`ProfessionalService`), sitemap,
   robots and a web manifest are generated from `src/lib/site.ts`.
 
 ### Animations on or off
 
-Phones and computers have a "reduce motion" setting (on iPhone: Settings, Accessibility,
-Motion; on Windows: Settings, Accessibility, Visual effects, Animation effects; on a Mac:
-System Settings, Accessibility, Display). Some people need it, and plenty of devices have
-it switched on without their owner knowing.
+Every visitor gets the full animations, whatever their device's "reduce motion" setting
+says. Anyone who would rather the page held still can switch them off (and on again) with
+the "Animations" switch at the foot of the page; the choice is remembered in that browser.
+Adding `?motion=reduced` or `?motion=full` to the address does the same for one visit.
 
-By default the site follows that setting. With it on, nothing travels across the screen:
-the intro and the headlines fade instead of sliding, the wordmark draws itself in place,
-the wall of work stands still (it can still be turned by hand) and there is no scroll
-showcase, the glow holds one frame, the moving rows of words stop and the demos show
-their finished state.
-
-Because that hides a good deal of this site, those visitors are told so: a small bar at
-the bottom of the screen says the animations are off and offers to turn them on. Either
-answer is remembered in that browser. Everyone, whatever their device says, can switch
-the animations off or on again from the foot of the page.
-
-**If the site looks still on your own device, that setting is why.** Tap "Turn on" in
-the bar at the bottom, or open the site with `?motion=full` on the end of the address to
-see the full version for that visit (`?motion=reduced` shows the calm one).
+Nothing reacts to scrolling speed: the wall of work and the rows of words each move at one
+steady pace, and the hero scrolls away like any other section.
 
 `AGENTS.md` is written by Next.js for AI coding tools; it is safe to leave as it is.

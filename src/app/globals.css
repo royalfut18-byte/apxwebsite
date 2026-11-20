@@ -189,7 +189,7 @@ html.is-locked body {
    */
   :root {
     --hero-screen: 100vh;
-    --hero-screens: 3;
+    --hero-screens: 1;
   }
   @supports (height: 1svh) {
     @media (min-width: 768px) {
@@ -202,13 +202,14 @@ html.is-locked body {
     height: calc(var(--hero-screens) * var(--hero-screen));
   }
   .hero-frame {
-    position: sticky;
+    /* Not pinned: the hero scrolls away like any other section. */
+    position: relative;
     top: 0;
     height: var(--hero-screen);
     overflow: hidden;
   }
   .hero-follow {
-    margin-top: calc(var(--hero-screen) * -1);
+    margin-top: 0;
   }
   /* Inside the frame: the copy on top, and the wall of work in whatever height is left. */
   .hero-stage {
@@ -850,7 +851,6 @@ html.intro-live .intro-root {
 /* There is no showcase, so the hero is pinned only for as long as the page takes to slide
    over it. (Only the variable is changed, so the short-screen layout above still applies.) */
 html[data-motion="reduced"] {
-  --hero-screens: 2;
   scroll-behavior: auto;
 }
 html[data-motion="reduced"] :is(.intro-creep, .intro-mark, .caret, .scroll-hint, .wall-caption-text),

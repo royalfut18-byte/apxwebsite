@@ -1,32 +1,22 @@
 /**
  * How much the site moves.
  *
- * By default it follows the device: a visitor whose phone or computer asks for reduced
- * motion gets a calm version (fades instead of travel, nothing spinning, nothing pinned).
- * They are offered the full version, and anyone can switch the animations off. A choice
- * made here is kept in the browser and wins over the device from then on.
+ * Every visitor gets the full animations, whatever their device is set to. Anyone can switch
+ * them off (and on again) from the foot of the page; that choice is kept in the browser.
  *
  * The answer is worked out in three places, from the same sources, and they always agree:
- *
- *  - MOTION_SCRIPT, inline in the page's <head>, before anything is painted. It writes the
- *    answer to <html data-motion="...">.
- *  - the stylesheet, which reads that attribute (see "Reduced motion" in globals.css);
- *  - the components, through `useReducedMotion`.
+ * MOTION_SCRIPT (inline in <head>, before anything is painted, which writes it to
+ * <html data-motion="...">), the stylesheet, which reads that attribute, and the
+ * components, through `useReducedMotion`.
  */
 export type Motion = "full" | "reduced";
 
 const KEY = "apx-motion";
 /** `?motion=full` or `?motion=reduced` in the address decides it for that visit alone. */
 const PARAM = "motion";
-const QUERY = "(prefers-reduced-motion: reduce)";
 
 const valid = (value: string | null | undefined): Motion | null =>
   value === "full" || value === "reduced" ? value : null;
-
-/** What the visitor's device asks for. */
-export function deviceMotion(): Motion {
-  return window.matchMedia(QUERY).matches ? "reduced" : "full";
-}
 
 /** What the visitor has asked for on this site, if anything. */
 export function chosenMotion(): Motion | null {
@@ -47,9 +37,9 @@ export function chosenMotion(): Motion | null {
 
 let cache: Motion | null = null;
 
-/** The answer: the visitor's choice if they have made one, otherwise the device's. */
+/** The answer: the visitor's choice if they have made one, otherwise the full animations. */
 export function currentMotion(): Motion {
-  if (cache === null) cache = chosenMotion() ?? deviceMotion();
+  if (cache === null) cache = chosenMotion() ?? "full";
   return cache;
 }
 
@@ -58,7 +48,7 @@ export function applyMotion() {
   document.documentElement.setAttribute("data-motion", currentMotion());
 }
 
-/** Remembers a choice without acting on it (used when the offer of animations is declined). */
+/** Remembers a choice. False where the browser will not store it. */
 export function rememberMotion(choice: Motion) {
   try {
     window.localStorage.setItem(KEY, choice);
@@ -84,7 +74,7 @@ export function chooseMotion(choice: Motion) {
 const listeners = new Set<() => void>();
 let wired = false;
 
-/** For `useReducedMotion`: tells React when the device's setting (or another tab) changes the answer. */
+/** For `useReducedMotion`: tells React when another tab changes the answer. */
 export function subscribeMotion(onChange: () => void) {
   if (!wired) {
     wired = true;
@@ -93,7 +83,6 @@ export function subscribeMotion(onChange: () => void) {
       applyMotion();
       listeners.forEach((listener) => listener());
     };
-    window.matchMedia(QUERY).addEventListener("change", refresh);
     window.addEventListener("storage", (event) => {
       if (event.key === KEY || event.key === null) refresh();
     });
@@ -105,4 +94,4 @@ export function subscribeMotion(onChange: () => void) {
 }
 
 /** The same decision as `currentMotion`, written out by hand so it can run before any other script. */
-export const MOTION_SCRIPT = `(function(){var m=null;try{m=new URLSearchParams(location.search).get("${PARAM}")}catch(e){}if(m!=="full"&&m!=="reduced"){m=null;try{m=localStorage.getItem("${KEY}")}catch(e){}}if(m!=="full"&&m!=="reduced"){m=matchMedia("${QUERY}").matches?"reduced":"full"}document.documentElement.setAttribute("data-motion",m)})()`;
+export const MOTION_SCRIPT = `(function(){var m=null;try{m=new URLSearchParams(location.search).get("${PARAM}")}catch(e){}if(m!=="full"&&m!=="reduced"){m=null;try{m=localStorage.getItem("${KEY}")}catch(e){}}if(m!=="full"&&m!=="reduced"){m="full"}document.documentElement.setAttribute("data-motion",m)})()`;
