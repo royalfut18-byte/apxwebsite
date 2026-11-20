@@ -108,7 +108,7 @@ export function Nav() {
             href={home ? "#top" : "/"}
             aria-label={`${site.name} home`}
             className="relative block h-[18px] w-[58px] text-bone md:h-5 md:w-16"
-            data-cursor="hover"
+
             onClick={() => setOpen(false)}
           >
             {showLogo && (

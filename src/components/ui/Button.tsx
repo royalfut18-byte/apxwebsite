@@ -8,8 +8,6 @@ type ButtonProps = {
   size?: "full" | "compact";
   className?: string;
   external?: boolean;
-  /** Label shown inside the cursor while hovering (desktop). */
-  cursor?: string;
 };
 
 const ARROW = (
@@ -29,14 +27,11 @@ export function Button({
   size = "full",
   className,
   external,
-  cursor,
 }: ButtonProps) {
   const compact = size === "compact";
   return (
     <a
       href={href}
-      data-cursor={cursor ? "label" : "hover"}
-      data-cursor-label={cursor}
       {...(external ? { target: "_blank", rel: "noopener" } : {})}
       className={cn(
         "group relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full font-semibold",

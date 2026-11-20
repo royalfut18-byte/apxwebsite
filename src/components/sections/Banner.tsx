@@ -17,8 +17,7 @@ export function Banner() {
   return (
     <a
       href="#contact"
-      data-cursor="label"
-      data-cursor-label="Let's talk"
+
       className="group relative mt-16 block overflow-hidden border-y border-white/[0.07] py-4 text-bone transition-colors duration-500 hover:text-ink focus-visible:text-ink md:mt-24 md:py-6"
     >
       <span

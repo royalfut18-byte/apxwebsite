@@ -286,8 +286,7 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
         aria-hidden="true"
         className="wall"
         data-show={show ? "" : undefined}
-        data-cursor="label"
-        data-cursor-label="Drag"
+
         style={{ "--spread": SPREAD.toFixed(4) } as React.CSSProperties}
       >
         <div ref={spinner} className="wall-spin">
@@ -337,7 +336,7 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
           e.preventDefault();
           scrollToProject(project.slug);
         }}
-        data-cursor="hover"
+
         className="wall-caption label group"
         style={{ scale: captionScale }}
       >

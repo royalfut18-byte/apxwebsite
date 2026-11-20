@@ -211,7 +211,7 @@ function ProjectCard({
               href={project.url}
               target="_blank"
               rel="noopener"
-              data-cursor="hover"
+
               className="group mt-8 inline-flex h-14 w-fit items-center gap-4 whitespace-nowrap rounded-full pl-7 pr-2 text-base font-semibold transition-transform duration-500 ease-[var(--ease-expo)] hover:scale-[1.03]"
               style={{ backgroundColor: theme.fg, color: theme.bg }}
             >
@@ -233,8 +233,7 @@ function ProjectCard({
             rel="noopener"
             tabIndex={-1}
             aria-hidden="true"
-            data-cursor="label"
-            data-cursor-label="Visit site"
+
             className="relative block self-end pl-[6%] md:pl-[8%] lg:col-span-7 lg:translate-y-[9%] lg:pl-[9%] xl:col-span-8"
           >
             <Devices project={project} travel={travel} still={still} />

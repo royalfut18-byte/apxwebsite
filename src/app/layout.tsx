@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Instrument_Serif, Mona_Sans } from "next/font/google";
 
-import { Cursor } from "@/components/Cursor";
 import { Intro } from "@/components/Intro";
 import { Nav } from "@/components/Nav";
 import { IntroProvider } from "@/components/providers/IntroProvider";
@@ -155,7 +154,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Intro />
           <Nav />
           <ScrollProgress />
-          <Cursor />
           {children}
         </IntroProvider>
       </body>
