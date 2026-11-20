@@ -241,7 +241,9 @@ html.is-locked body {
      Everything is sized from one number, the width of a screen.
      --------------------------------------------------------------------------- */
   .wall {
-    --w: min(70vw, 34svh, 24rem);
+    /* One hundredth of the screen's height: the "small viewport" unit where the browser has it. */
+    --vh: 1vh;
+    --w: min(70vw, calc(34 * var(--vh)), 24rem);
     /* How far each screen stands from the axis: edge to edge, plus a small gap. */
     --r: calc(var(--w) * var(--spread) + 0.75rem);
     position: relative;
@@ -259,16 +261,21 @@ html.is-locked body {
   .wall[data-dragging] {
     cursor: grabbing;
   }
+  @supports (height: 1svh) {
+    .wall {
+      --vh: 1svh;
+    }
+  }
   @media (min-width: 768px) and (max-height: 600px) {
     .wall {
-      --w: min(34vw, 62svh);
+      --w: min(34vw, calc(62 * var(--vh)));
     }
   }
   @media (min-width: 768px) and (min-height: 601px) {
     .wall {
       /* How wide a screen may be: under a third of a landscape window, over half of a portrait one. */
       --fit: 30vw;
-      --w: clamp(12rem, min(var(--fit), 40svh), 46rem);
+      --w: clamp(12rem, min(var(--fit), calc(40 * var(--vh))), 46rem);
     }
     /*
      * Better: exactly as large as the space under the copy allows. 100cqh is the height
