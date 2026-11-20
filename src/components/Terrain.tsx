@@ -681,6 +681,7 @@ function createScene(
     seenIntensity: -1,
     held: false, // the previous animation frame was skipped (30 fps pacing)
     drewAt: 0, // when the previous animation frame drew, or 0 if it did not
+    wiped: true, // the canvas is empty (new, or just resized) and must be drawn before it is shown
     // One frame only, redrawn when something asks: reduced motion, or a device that
     // could not keep up (see `freeze`).
     still: reduced,
@@ -779,8 +780,11 @@ function createScene(
     state.width = Math.round(cssW * dpr);
     state.height = Math.round(cssH * dpr);
     if (canvas.width !== state.width || canvas.height !== state.height) {
+      // Resizing a canvas wipes it. Whoever asked for the new size draws again in the same
+      // frame (see `loop` and the ResizeObserver), so the mountain never blinks out.
       canvas.width = state.width;
       canvas.height = state.height;
+      state.wiped = true;
     }
   }
 
@@ -969,7 +973,7 @@ function createScene(
       state.torch > 0.02 ||
       Math.abs(state.tx - state.px) + Math.abs(state.ty - state.py) > 0.004;
     const half = options.maxFps <= 30 || !changing;
-    if (half && !state.still && !state.held) {
+    if (half && !state.still && !state.held && !state.wiped) {
       state.held = true;
       state.raf = requestAnimationFrame(loop);
       return;
@@ -981,6 +985,7 @@ function createScene(
     const frameMs = state.last ? now - state.last : 0;
     state.last = now;
     draw(now, frameMs);
+    state.wiped = false;
     if (!state.still) {
       state.drewAt = now;
       state.raf = requestAnimationFrame(loop);
@@ -1014,7 +1019,15 @@ function createScene(
 
   const ro = new ResizeObserver(() => {
     resize();
-    if (state.still) kick();
+    // The browser paints straight after this callback, so a wiped canvas is redrawn here
+    // rather than a frame later.
+    const showing = state.ready && !state.lost && state.visible && !document.hidden && live.current.active;
+    if (state.wiped && showing) {
+      draw(performance.now(), 0);
+      state.wiped = false;
+    } else if (state.still) {
+      kick();
+    }
   });
   ro.observe(canvas);
 
