@@ -1,15 +1,20 @@
 "use client";
 
-import { motion, useReducedMotion, type TargetAndTransition } from "framer-motion";
+import { motion, type TargetAndTransition } from "framer-motion";
 
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ease } from "@/lib/cn";
 
 type RevealProps = {
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  /** Distance travelled, in pixels. */
+  /** Distance travelled upward into place, in pixels. */
   y?: number;
+  /** Distance travelled sideways, in pixels. Negative arrives from the left. */
+  x?: number;
+  /** Swing in from one side, turning to face the visitor, instead of rising. */
+  swing?: "left" | "right";
   /** Controlled mode, as in RevealText. */
   show?: boolean;
   /**
@@ -24,15 +29,17 @@ const CLOSED = "inset(0% 0% 100% 0%)";
 const OPEN = "inset(0% 0% 0% 0%)";
 
 /**
- * Fade and rise (or wipe and rise). The workhorse for body copy, labels and cards.
- * Only `transform`, `opacity` and `clip-path` are animated, all of which the browser
- * runs on its compositor.
+ * Fade and rise (or wipe and rise, or slide in from a side, or swing in in 3D). The
+ * workhorse for body copy, labels and cards. Only `transform`, `opacity` and `clip-path`
+ * are animated, all of which the browser runs on its compositor.
  */
 export function Reveal({
   children,
   className,
   delay = 0,
   y = 28,
+  x = 0,
+  swing,
   show,
   wipe = false,
   as = "div",
@@ -41,7 +48,13 @@ export function Reveal({
   // Reduced motion: a plain fade, with no travel and no wipe. The transform and the clip
   // are still named (as "none") so they replace the starting values in the server's HTML.
   const still = useReducedMotion();
-  const from = `translateY(${y}px)`;
+  // Each pair is the same list of functions with different numbers, which is what lets
+  // the browser run the change itself.
+  const side = swing === "left" ? -1 : 1;
+  const from = swing
+    ? `perspective(1400px) translateX(${side * 9}%) rotateY(${side * 20}deg)`
+    : `translate(${x}px, ${y}px)`;
+  const to = swing ? "perspective(1400px) translateX(0%) rotateY(0deg)" : "translate(0px, 0px)";
   const hidden: TargetAndTransition = still
     ? { opacity: 0, transform: "none", clipPath: "none" }
     : wipe
@@ -54,10 +67,10 @@ export function Reveal({
     : wipe
       ? {
           clipPath: OPEN,
-          transform: "translateY(0px)",
+          transform: to,
           transitionEnd: { clipPath: "none", transform: "none" },
         }
-      : { opacity: 1, transform: "translateY(0px)", transitionEnd: { transform: "none" } };
+      : { opacity: 1, transform: to, transitionEnd: { transform: "none" } };
   const transition = still
     ? {
         duration: 0.6,
@@ -66,7 +79,7 @@ export function Reveal({
         transform: { duration: 0 },
         clipPath: { duration: 0 },
       }
-    : { duration: 1, ease: ease.expo, delay };
+    : { duration: swing ? 1.25 : 1, ease: ease.expo, delay };
   const controlled = show !== undefined;
 
   return (

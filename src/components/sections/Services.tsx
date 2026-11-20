@@ -33,6 +33,14 @@ const CAPTIONS: Record<ServiceKey, string> = {
 const DEMO_BASE_WIDTH = 640;
 const DEMO_MAX_SCALE = 1.45;
 
+/** In the pinned list, the lines of the open service follow each other in, a beat apart. */
+const BEATS = ["delay-100", "delay-200", "delay-300"];
+const cascade = (on: boolean, beat: number) =>
+  cn(
+    "transition-[opacity,translate] duration-700 ease-[var(--ease-expo)] still:translate-y-0 still:transition-none",
+    on ? `translate-y-0 opacity-100 ${BEATS[beat]}` : "translate-y-3 opacity-0",
+  );
+
 /** The stage each demo plays on. */
 function Stage({ service }: { service: (typeof services)[number] }) {
   const Demo = DEMOS[service.key];
@@ -132,7 +140,15 @@ export function Services() {
               {services.map((service, i) => {
                 const on = i === active;
                 return (
-                  <li key={service.key} className="border-b border-white/10">
+                  // Each row slides in from the left, one after another.
+                  <Reveal
+                    as="li"
+                    key={service.key}
+                    x={-56}
+                    y={0}
+                    delay={i * 0.09}
+                    className="border-b border-white/10"
+                  >
                     <h3>
                       <button
                         type="button"
@@ -150,8 +166,11 @@ export function Services() {
                         </span>
                         <span
                           className={cn(
-                            "display text-[clamp(1.9rem,3vw,3.1rem)] transition-colors duration-500",
-                            on ? "text-bone" : "text-faint group-hover:text-bone-dim",
+                            "display text-[clamp(1.9rem,3vw,3.1rem)] transition-[color,translate] duration-500 ease-[var(--ease-expo)]",
+                            // The one on show steps forward out of the line.
+                            on
+                              ? "translate-x-3 text-bone still:translate-x-0"
+                              : "text-faint group-hover:text-bone-dim",
                           )}
                         >
                           {service.title}
@@ -169,22 +188,27 @@ export function Services() {
                         natively, with no script measuring heights on every frame. */}
                     <div
                       className={cn(
-                        "grid transition-[grid-template-rows] duration-600 ease-[var(--ease-expo)] motion-reduce:transition-none",
+                        "grid transition-[grid-template-rows] duration-600 ease-[var(--ease-expo)] still:transition-none",
                         on ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                       )}
                     >
                       <div
                         className={cn(
-                          "min-h-0 overflow-hidden transition-[opacity,visibility] duration-600 ease-[var(--ease-expo)] motion-reduce:transition-none",
+                          "min-h-0 overflow-hidden transition-[opacity,visibility] duration-600 ease-[var(--ease-expo)] still:transition-none",
                           on ? "visible opacity-100" : "invisible opacity-0",
                         )}
                       >
                         <div className="pb-7 pl-12 pr-6">
-                          <p className="accent text-2xl">{service.kicker}</p>
-                          <p className="mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim">
+                          <p className={cn("accent text-2xl", cascade(on, 0))}>{service.kicker}</p>
+                          <p
+                            className={cn(
+                              "mt-3 max-w-md text-[1.0625rem] leading-relaxed text-bone-dim",
+                              cascade(on, 1),
+                            )}
+                          >
                             {service.body}
                           </p>
-                          <ul className="mt-5 flex flex-wrap gap-2">
+                          <ul className={cn("mt-5 flex flex-wrap gap-2", cascade(on, 2))}>
                             {service.points.map((point) => (
                               <li
                                 key={point}
@@ -197,7 +221,7 @@ export function Services() {
                         </div>
                       </div>
                     </div>
-                  </li>
+                  </Reveal>
                 );
               })}
             </ul>
@@ -207,7 +231,10 @@ export function Services() {
         <div className="col-span-7">
           {services.map((service, i) => (
             <Panel key={service.key} index={i} onActive={setActive}>
-              <Stage service={service} />
+              {/* Swings in from the right, turning to face the visitor. */}
+              <Reveal swing="right" className="w-full">
+                <Stage service={service} />
+              </Reveal>
             </Panel>
           ))}
         </div>
@@ -215,9 +242,10 @@ export function Services() {
 
       {/* Mobile and tablet: one card per service. */}
       <ul className="mt-14 grid gap-16 lg:hidden">
-        {services.map((service) => (
+        {services.map((service, i) => (
           <li key={service.key}>
-            <Reveal>
+            {/* The words come in from one side and the demo from the other, swapping each time. */}
+            <Reveal x={i % 2 ? 44 : -44} y={0}>
               <div className="flex items-baseline gap-4">
                 <span className="label text-ember">{service.index}</span>
                 <h3 className="display text-[clamp(2.1rem,9vw,3.25rem)] text-bone">{service.title}</h3>
@@ -235,7 +263,7 @@ export function Services() {
                 ))}
               </ul>
             </Reveal>
-            <Reveal delay={0.1} className="mt-7">
+            <Reveal swing={i % 2 ? "left" : "right"} delay={0.1} className="mt-7">
               <Stage service={service} />
             </Reveal>
           </li>

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRef } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { projects, type Project } from "@/lib/projects";
 
 import { Reveal } from "../ui/Reveal";
@@ -253,8 +254,8 @@ function ProjectCard({
 
 export function Work() {
   const stack = useRef<HTMLDivElement>(null);
-  const stacked = useMediaQuery("(min-width: 1024px) and (prefers-reduced-motion: no-preference)");
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
+  const stacked = useMediaQuery("(min-width: 1024px)") && !reduced;
   const { scrollYProgress } = useScroll({ target: stack, offset: ["start start", "end end"] });
 
   return (

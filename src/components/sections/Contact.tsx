@@ -8,6 +8,7 @@ import { site } from "@/lib/site";
 import { Aurora } from "../Aurora";
 import { Reveal } from "../ui/Reveal";
 import { RevealText } from "../ui/RevealText";
+import { Rule } from "../ui/Rule";
 import { ContactForm } from "./ContactForm";
 
 export function Contact() {
@@ -41,7 +42,7 @@ export function Contact() {
             <Reveal y={14}>
               <p className="label flex items-center gap-3 text-mute">
                 <span className="text-ember">05</span>
-                <span className="h-px w-8 bg-white/20" />
+                <Rule className="bg-white/20" />
                 Start a project
               </p>
             </Reveal>

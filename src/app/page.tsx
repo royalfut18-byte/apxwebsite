@@ -1,3 +1,4 @@
+import { Banner } from "@/components/sections/Banner";
 import { Contact } from "@/components/sections/Contact";
 import { Footer } from "@/components/sections/Footer";
 import { Hero } from "@/components/sections/Hero";
@@ -19,6 +20,7 @@ export default function Home() {
           <Work />
           <Statement />
           <Process />
+          <Banner />
           <Contact />
         </div>
       </main>

@@ -3,8 +3,11 @@ import { Geist_Mono, Instrument_Serif, Mona_Sans } from "next/font/google";
 
 import { Cursor } from "@/components/Cursor";
 import { Intro } from "@/components/Intro";
+import { MotionPrompt } from "@/components/MotionPrompt";
 import { Nav } from "@/components/Nav";
 import { IntroProvider } from "@/components/providers/IntroProvider";
+import { ScrollProgress } from "@/components/ScrollProgress";
+import { MOTION_SCRIPT } from "@/lib/motion";
 import { services, site } from "@/lib/site";
 
 import "./globals.css";
@@ -123,15 +126,23 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en-AU"
       data-scroll-behavior="smooth"
       className={`${mona.variable} ${instrument.variable} ${geistMono.variable} antialiased`}
+      // The script below adds data-motion to this element before React arrives.
+      suppressHydrationWarning
     >
+      <head>
+        {/* Decides how much the page may move before anything is painted (see lib/motion.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: MOTION_SCRIPT }} />
+      </head>
       <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
-        {/* Without scripts there is no intro and nothing animates in, so show everything as-is. */}
+        {/* Without scripts there is no intro and nothing animates in, so show everything as-is.
+            The last rule is for devices that ask for reduced motion: with no script to read
+            that setting, it stops the few things CSS would otherwise keep moving. */}
         <noscript>
-          <style>{`.intro-root,.wall-caption{display:none!important}:root{--hero-screens:2!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}`}</style>
+          <style>{`.intro-root,.wall-caption{display:none!important}:root{--hero-screens:2!important}[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important}[data-draw] path{stroke-dasharray:none!important;stroke-dashoffset:0!important;opacity:1!important}@media (prefers-reduced-motion:reduce){.wall-ring{animation-play-state:paused!important}.scroll-hint,.pulse-dot::after{animation:none!important}}`}</style>
         </noscript>
 
         <a
@@ -144,8 +155,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <IntroProvider>
           <Intro />
           <Nav />
+          <ScrollProgress />
           <Cursor />
           {children}
+          <MotionPrompt />
         </IntroProvider>
       </body>
     </html>

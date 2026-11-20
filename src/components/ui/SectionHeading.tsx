@@ -2,6 +2,7 @@ import { cn } from "@/lib/cn";
 
 import { Reveal } from "./Reveal";
 import { RevealText } from "./RevealText";
+import { Rule } from "./Rule";
 
 type SectionHeadingProps = {
   index: string;
@@ -40,7 +41,7 @@ export function SectionHeading({
         <Reveal y={14}>
           <p className={cn("label flex items-center gap-3", light ? "text-ink/65" : "text-mute")}>
             <span className={light ? "text-ember-ink" : "text-ember"}>{index}</span>
-            <span className={cn("h-px w-8", light ? "bg-ink/25" : "bg-white/20")} />
+            <Rule className={light ? "bg-ink/25" : "bg-white/20"} />
             {label}
           </p>
         </Reveal>

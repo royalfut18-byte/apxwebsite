@@ -3,10 +3,11 @@
 import { useMotionValueEvent, useScroll } from "framer-motion";
 import { useRef, useState } from "react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/cn";
 
 import { Reveal } from "../ui/Reveal";
+import { Rule } from "../ui/Rule";
 
 // Asterisks mark the words set in the accent, as in the headlines.
 const TEXT =
@@ -21,7 +22,7 @@ const WORDS = TEXT.split(" ");
  */
 export function Statement() {
   const ref = useRef<HTMLParagraphElement>(null);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.82", "end 0.5"] });
   const [lit, setLit] = useState(0);
 
@@ -36,7 +37,7 @@ export function Statement() {
         <Reveal y={14} className="lg:col-span-3">
           <p className="label flex items-center gap-3 text-mute lg:sticky lg:top-32">
             <span className="text-ember">03</span>
-            <span className="h-px w-8 bg-white/20" />
+            <Rule className="bg-white/20" />
             Why one team
           </p>
         </Reveal>

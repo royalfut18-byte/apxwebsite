@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, type MotionValue } from "framer-m
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { scrollToProject } from "@/lib/scroll";
 import { screens } from "@/lib/showcase";
 
@@ -64,7 +64,7 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
   const ring = useRef<HTMLDivElement>(null);
   const control = useRef<Control | null>(null);
   const [front, setFront] = useState(0);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const host = stage.current;

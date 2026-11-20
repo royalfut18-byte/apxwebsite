@@ -1,8 +1,9 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { Fragment } from "react";
 
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn, ease } from "@/lib/cn";
 
 type Tag = "h1" | "h2" | "h3" | "p" | "span" | "div";

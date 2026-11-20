@@ -17,6 +17,7 @@ import {
 import { site } from "@/lib/site";
 
 import { Magnetic } from "../ui/Magnetic";
+import { Reveal } from "../ui/Reveal";
 
 type Status = "idle" | "sending" | "sent" | "mailto" | "error";
 
@@ -310,7 +311,8 @@ export function ContactForm() {
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.6, ease: ease.expo }}
           >
-            <div className="grid gap-9 sm:grid-cols-2 sm:gap-8">
+            {/* The rows arrive one after another. */}
+            <Reveal y={22} delay={0.15} className="grid gap-9 sm:grid-cols-2 sm:gap-8">
               <Field
                 label="Your name"
                 name="name"
@@ -332,54 +334,60 @@ export function ContactForm() {
                 maxLength={LIMITS.email}
                 placeholder="alex@yourbusiness.com.au"
               />
-            </div>
+            </Reveal>
 
-            <Field
-              label="Business"
-              name="business"
-              value={enquiry.business}
-              onChange={(v) => set("business", v)}
-              optional
-              autoComplete="organization"
-              maxLength={LIMITS.business}
-              placeholder="What's it called?"
-            />
+            <Reveal y={22} delay={0.23}>
+              <Field
+                label="Business"
+                name="business"
+                value={enquiry.business}
+                onChange={(v) => set("business", v)}
+                optional
+                autoComplete="organization"
+                maxLength={LIMITS.business}
+                placeholder="What's it called?"
+              />
+            </Reveal>
 
-            <fieldset>
-              <legend className="label text-mute">What do you need?</legend>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {NEEDS.map((need) => {
-                  const on = enquiry.needs.includes(need);
-                  return (
-                    <button
-                      key={need}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => toggleNeed(need)}
-                      className={cn(
-                        "h-11 rounded-full border px-5 text-[0.9375rem] font-medium transition-[background-color,border-color,color,transform] duration-300 active:scale-95",
-                        on
-                          ? "border-ember bg-ember text-ink"
-                          : "border-white/15 text-bone-dim hover:border-white/40 hover:text-bone",
-                      )}
-                    >
-                      {need}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <Reveal y={22} delay={0.31}>
+              <fieldset>
+                <legend className="label text-mute">What do you need?</legend>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {NEEDS.map((need) => {
+                    const on = enquiry.needs.includes(need);
+                    return (
+                      <button
+                        key={need}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleNeed(need)}
+                        className={cn(
+                          "h-11 rounded-full border px-5 text-[0.9375rem] font-medium transition-[background-color,border-color,color,transform] duration-300 active:scale-95",
+                          on
+                            ? "border-ember bg-ember text-ink"
+                            : "border-white/15 text-bone-dim hover:border-white/40 hover:text-bone",
+                        )}
+                      >
+                        {need}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            </Reveal>
 
-            <Field
-              label="Tell us about it"
-              name="message"
-              value={enquiry.message}
-              onChange={(v) => set("message", v)}
-              error={errors.message}
-              maxLength={LIMITS.message}
-              multiline
-              placeholder="What does the business do, and what would a win look like?"
-            />
+            <Reveal y={22} delay={0.39}>
+              <Field
+                label="Tell us about it"
+                name="message"
+                value={enquiry.message}
+                onChange={(v) => set("message", v)}
+                error={errors.message}
+                maxLength={LIMITS.message}
+                multiline
+                placeholder="What does the business do, and what would a win look like?"
+              />
+            </Reveal>
 
             {/* Honeypot. Hidden from people and from assistive tech; bots tend to fill it in. */}
             <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
@@ -396,7 +404,11 @@ export function ContactForm() {
               </label>
             </div>
 
-            <div className="flex flex-col-reverse items-start justify-between gap-5 pt-2 sm:flex-row sm:items-center">
+            <Reveal
+              y={22}
+              delay={0.47}
+              className="flex flex-col-reverse items-start justify-between gap-5 pt-2 sm:flex-row sm:items-center"
+            >
               <p className="max-w-[17rem] text-[0.8125rem] leading-relaxed text-faint">
                 We only use these details to reply to you.
               </p>
@@ -428,7 +440,7 @@ export function ContactForm() {
                   </span>
                 </button>
               </Magnetic>
-            </div>
+            </Reveal>
           </motion.form>
         )}
       </AnimatePresence>

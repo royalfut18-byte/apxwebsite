@@ -44,6 +44,9 @@
   --breakpoint-3xl: 112rem;
 }
 
+/* `still:` applies while the animations are turned down (see lib/motion.ts). */
+@custom-variant still (&:where(html[data-motion="reduced"] *));
+
 /* ---------------------------------------------------------------------------
    Base
    Kept inside a cascade layer so that utility classes can always override it.
@@ -483,6 +486,12 @@ html.is-locked body {
     }
   }
 
+  /* The ticker leans as the page scrolls (VelocityMarquee.tsx sets the angle); this eases it. */
+  .marquee-lean {
+    transition: transform 0.6s var(--ease-quart);
+    will-change: transform;
+  }
+
   /* Film grain over the glows: hides the banding that soft gradients show on dark screens. */
   .grain {
     background-image: url("/grain.png");
@@ -609,35 +618,253 @@ html.intro-live .intro-root {
   animation: none;
 }
 
-/* Reduced motion: there is no showcase, so the hero is pinned only for as long as the
-   page takes to slide over it. */
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --hero-screens: 2;
+/* ---------------------------------------------------------------------------
+   Intro: the wordmark
+   Three solid letters swing in, the tip of the A catches light, a band of colour
+   runs through them, and the depth folds away (see LogoAssemble.tsx). Times are
+   from the moment the wordmark appears; Intro.tsx waits for the same total.
+   --------------------------------------------------------------------------- */
+
+.logo-3d {
+  /* The width of the wordmark. Everything else is a share of it. */
+  --lw: clamp(12.5rem, 32vw, 25rem);
+  /* One layer of a letter's depth. */
+  --ld: calc(var(--lw) * 0.0046);
+  position: relative;
+  width: var(--lw);
+  height: calc(var(--lw) * 56 / 179);
+  perspective: calc(var(--lw) * 2.3);
+}
+/* The whole wordmark sways once as the letters land, which is what shows their depth. */
+.logo-turn {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: logo-sway 1.5s both;
+  will-change: transform;
+}
+.logo-glyph {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* Turns about the middle of its own depth. */
+  transform-origin: 50% 50% calc(var(--ld) * -5);
+  animation: logo-swing 1s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(var(--i) * 110ms + 60ms);
+  will-change: transform;
+}
+.logo-slab,
+.logo-face,
+.logo-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.logo-glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The copies fade in one by one rather than the letter as a whole: fading the letter
+   itself would press its depth flat for as long as the fade lasted. */
+.logo-face {
+  animation: logo-appear 0.16s ease-out both;
+  animation-delay: calc(var(--i) * 110ms + 60ms);
+}
+.logo-slab {
+  transform: translateZ(calc(var(--ld) * var(--k) * -1));
+  animation:
+    logo-appear 0.16s ease-out both,
+    logo-fold 0.26s ease-in both;
+  animation-delay: calc(var(--i) * 110ms + 60ms), 1.54s;
+}
+/* The ember tip of the A: unlit until the letters have landed. */
+.logo-tip {
+  color: var(--color-ember);
+  transform: translateZ(0.5px);
+  animation: logo-appear 0.2s ease-out 1s both;
+}
+.logo-burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translateZ(1px);
+}
+.logo-ring {
+  position: absolute;
+  top: calc(var(--lw) * -0.3);
+  left: calc(var(--lw) * -0.3);
+  width: calc(var(--lw) * 0.6);
+  height: calc(var(--lw) * 0.6);
+  border: 3px solid var(--color-ember);
+  border-radius: 50%;
+  animation: logo-ring 0.8s var(--ease-expo) 1s both;
+}
+.logo-ring + .logo-ring {
+  border-color: var(--color-rose);
+  animation-delay: 1.05s;
+}
+.logo-spark {
+  position: absolute;
+  top: -1.5px;
+  left: 0;
+  width: calc(var(--lw) * 0.09);
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--color-ember), var(--color-ember-soft));
+  transform-origin: 0 50%;
+  animation: logo-spark 0.6s var(--ease-expo) both;
+  animation-delay: calc(1s + var(--n) * 14ms);
+}
+.logo-glow {
+  position: absolute;
+  inset: -150% -35%;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 91 46 / 0.5),
+    rgb(255 61 127 / 0.2) 42%,
+    rgb(255 61 127 / 0) 72%
+  );
+  animation: logo-glow 0.85s ease-out 0.98s both;
+}
+/* Only seen through the letters: LogoAssemble.tsx gives it their shape as a mask. */
+.logo-sheen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform: translateZ(1px);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.logo-sheen i {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 55%;
+  background: linear-gradient(
+    100deg,
+    rgb(122 69 255 / 0) 0%,
+    var(--color-violet) 26%,
+    var(--color-rose) 48%,
+    var(--color-ember) 68%,
+    #fff 84%,
+    rgb(255 255 255 / 0) 100%
+  );
+  animation: logo-sheen 0.62s cubic-bezier(0.4, 0, 0.5, 1) 1.14s both;
+}
+
+@keyframes logo-swing {
+  from {
+    transform: translate3d(0, 30%, calc(var(--lw) * -0.7)) rotateY(-112deg) rotateX(18deg);
+  }
+  to {
+    transform: translate3d(0, 0, 0) rotateY(0deg) rotateX(0deg);
+  }
+}
+@keyframes logo-sway {
+  0% {
+    transform: rotateY(22deg) rotateX(-9deg);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  56% {
+    transform: rotateY(-13deg) rotateX(5deg);
+    animation-timing-function: cubic-bezier(0.37, 0, 0.3, 1);
+  }
+  100% {
+    transform: rotateY(0deg) rotateX(0deg);
+  }
+}
+@keyframes logo-appear {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes logo-fold {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes logo-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+  6% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes logo-spark {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(calc(var(--lw) * 0.04)) scaleX(0.3);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(calc(var(--lw) * 0.26)) scaleX(1);
+  }
+}
+@keyframes logo-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+@keyframes logo-sheen {
+  from {
+    transform: translateX(-105%);
+  }
+  to {
+    transform: translateX(190%);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .intro-creep,
-  .intro-mark,
-  .caret,
-  .scroll-hint,
-  .pulse-dot::after,
-  .wall-caption-text {
-    animation: none;
-  }
-  .tilt {
-    transform: none;
-  }
-  /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
-  .wall-ring {
-    animation-play-state: paused;
-  }
-  .wall-rise {
-    transform: none;
-    transition: opacity 0.8s ease-out;
-  }
+/* ---------------------------------------------------------------------------
+   Reduced motion
+   Applies when the visitor's device asks for it, or when they switch the
+   animations off here; not when they have asked for the full version. The
+   script in <head> works that out and sets data-motion (see lib/motion.ts).
+   Without scripts nothing sets it: the few animations that CSS runs by itself
+   are covered by the <noscript> styles in layout.tsx.
+   --------------------------------------------------------------------------- */
+
+/* There is no showcase, so the hero is pinned only for as long as the page takes to slide
+   over it. (Only the variable is changed, so the short-screen layout above still applies.) */
+html[data-motion="reduced"] {
+  --hero-screens: 2;
+  scroll-behavior: auto;
+}
+html[data-motion="reduced"] :is(.intro-creep, .intro-mark, .caret, .scroll-hint, .wall-caption-text),
+html[data-motion="reduced"] .pulse-dot::after {
+  animation: none;
+}
+html[data-motion="reduced"] .tilt {
+  transform: none;
+}
+/* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
+html[data-motion="reduced"] .wall-ring {
+  animation-play-state: paused;
+}
+html[data-motion="reduced"] .wall-rise {
+  transform: none;
+  transition: opacity 0.8s ease-out;
 }

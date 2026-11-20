@@ -11,7 +11,7 @@ import { useId } from "react";
  * The A has no crossbar, and its tip carries the ember accent.
  */
 
-const LETTERS = [
+export const LETTERS = [
   // Λ
   "M2.15 64 L28 12.3 L53.85 64",
   // P
@@ -21,7 +21,7 @@ const LETTERS = [
   "M178.1 -8 L121.9 64",
 ];
 
-const STROKE = 11;
+export const STROKE = 11;
 
 type LogoProps = {
   className?: string;

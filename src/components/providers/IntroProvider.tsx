@@ -13,7 +13,9 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useIsClient } from "@/hooks/useIsClient";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { applyMotion, currentMotion } from "@/lib/motion";
 
 /**
  * The page has three states on load:
@@ -31,7 +33,7 @@ type IntroContextValue = {
   ready: boolean;
   /** True when there is no intro at all on this page load (a deep link, or any page but home). */
   skipped: boolean;
-  /** The visitor asked for reduced motion: the intro still plays, as a simple fade. */
+  /** The animations are turned down (see lib/motion.ts): the intro still plays, as a simple fade. */
   reduced: boolean;
   setPhase: (phase: IntroPhase) => void;
 };
@@ -63,11 +65,23 @@ export function IntroProvider({ children }: { children: React.ReactNode }) {
   // The intro plays on every visit to the home page. It is skipped only for someone
   // arriving on a deep link such as /#contact, who should land on what they asked for,
   // and on pages other than the home page.
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
+  // Framer Motion fixes each element's reduced-motion setting when the element is created,
+  // which for most of the page is the very first render in the browser. `reduced` is not
+  // known to React yet at that point (it has to match the server's HTML first), so that one
+  // render reads the answer directly. Nothing drawn depends on it, so nothing can mismatch.
+  const [reducedAtFirst] = useState(() => typeof window !== "undefined" && currentMotion() === "reduced");
+  const still = useIsClient() ? reduced : reducedAtFirst;
   const target = useSyncExternalStore(noop, landingTarget, () => "");
   const home = usePathname() === "/";
   const skipped = Boolean(target) || !home;
   const phase: IntroPhase = skipped ? "done" : requested;
+
+  // The script in <head> has already told the stylesheet how much may move. This repeats it,
+  // because in development React rebuilds <html> once and drops what that script wrote.
+  useLayoutEffect(() => {
+    applyMotion();
+  }, []);
 
   // Keep the page still while the curtain is down.
   useLayoutEffect(() => {
@@ -114,8 +128,8 @@ export function IntroProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <IntroContext.Provider value={value}>
-      {/* "user": for visitors who ask for reduced motion, movement is dropped and only fades remain. */}
-      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+      {/* "always": with the animations turned down, movement is dropped and only fades remain. */}
+      <MotionConfig reducedMotion={still ? "always" : "never"}>{children}</MotionConfig>
     </IntroContext.Provider>
   );
 }

@@ -4,6 +4,7 @@ import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ease } from "@/lib/cn";
 import { site } from "@/lib/site";
 
@@ -43,7 +44,7 @@ export function Hero() {
   const wall = useRef<HTMLDivElement>(null);
 
   const flowing = useMediaQuery("(max-height: 600px)");
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
   const mode: Mode = flowing ? "flow" : reduced ? "pinned" : "showcase";
   const modeRef = useRef<Mode>(mode);
   useEffect(() => {

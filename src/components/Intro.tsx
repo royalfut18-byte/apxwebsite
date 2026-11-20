@@ -4,17 +4,21 @@ import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "
 import { useEffect, useState } from "react";
 
 import { cn, ease } from "@/lib/cn";
+import { currentMotion } from "@/lib/motion";
 
 import { Logo, Mark } from "./Logo";
+import { LogoAssemble } from "./LogoAssemble";
 import { useIntro } from "./providers/IntroProvider";
 
 /**
  * The opening sequence.
  *
  * Four words (what APX does) roll past in 3D, like the faces of a drum, while a counter
- * climbs, the wordmark draws itself, then two curtains lift: ink first, with a band of colour behind it. The
- * wordmark does not fade out. It flies up into the header and becomes the
- * logo (it shares a `layoutId` with the one in <Nav />).
+ * climbs. Then the wordmark arrives as three solid letters that swing in and lock together,
+ * the tip of the A catches light, and a band of colour runs through them (LogoAssemble.tsx).
+ * Two curtains lift: ink first, with a band of colour behind it. The wordmark does not fade
+ * out. It flies up into the header and becomes the logo (it shares a `layoutId` with the
+ * one in <Nav />).
  *
  * Four things keep it dependable, slow phones and old laptops included:
  *
@@ -27,14 +31,17 @@ import { useIntro } from "./providers/IntroProvider";
  *  - Each step also waits for a frame to be drawn, which only happens while the tab is
  *    being looked at. A page opened in a background tab holds its intro until then.
  *
- * Visitors who ask for reduced motion get the same sequence with nothing travelling:
- * the words cross-fade, the wordmark simply appears, and the curtain fades away.
+ * With the animations turned down (lib/motion.ts) the same sequence plays with nothing
+ * travelling: the words cross-fade, the wordmark draws itself in place, and the curtain
+ * fades away.
  */
 
 const WORDS = ["Websites", "SEO", "Instagram", "Tools"];
 const WORD_MS = 370;
-const LOGO_MS = 1000;
-const HOLD_MS = 240;
+// How long the wordmark has the screen: the 3D arrival (timed in globals.css, under
+// "Intro: the wordmark"), or the simpler drawn one when the animations are turned down.
+const LOGO_MS = { full: 1650, reduced: 1000 };
+const HOLD_MS = 200;
 const FONT_WAIT_MS = 500;
 const LIFT_S = 1;
 
@@ -110,7 +117,9 @@ export function Intro() {
       await frame();
       if (cancelled) return;
 
-      const total = WORDS.length * WORD_MS + LOGO_MS + HOLD_MS;
+      // (Asked directly: this runs once, before React has been told the answer.)
+      const logo = LOGO_MS[currentMotion()] + HOLD_MS;
+      const total = WORDS.length * WORD_MS + logo;
       counter = animate(count, 100, { duration: total / 1000, ease: ease.inOut });
 
       for (let i = 0; i < WORDS.length; i++) {
@@ -121,7 +130,7 @@ export function Intro() {
       }
 
       setStep(WORDS.length);
-      await wait(LOGO_MS + HOLD_MS);
+      await wait(logo);
       await frame();
       if (cancelled) return;
       setPhase("reveal");
@@ -225,9 +234,15 @@ export function Intro() {
       {/* The wordmark sits above the curtains so it can fly to the header as they lift. */}
       {showLogo && (
         <div className="intro-root pointer-events-none fixed inset-0 z-[65] grid place-items-center">
-          <motion.div layoutId="apx-logo" className="w-[clamp(11rem,28vw,23rem)] text-bone">
-            <Logo draw={!reduced} className="block h-auto w-full" />
-          </motion.div>
+          {reduced ? (
+            <motion.div layoutId="apx-logo" className="w-[clamp(11rem,28vw,23rem)] text-bone">
+              <Logo draw className="block h-auto w-full" />
+            </motion.div>
+          ) : (
+            <motion.div layoutId="apx-logo" className="logo-3d text-bone" role="img" aria-label="APX">
+              <LogoAssemble />
+            </motion.div>
+          )}
         </div>
       )}
     </>

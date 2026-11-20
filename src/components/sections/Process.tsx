@@ -3,7 +3,7 @@
 import { motion, useMotionValue, useScroll, useTransform, type MotionValue } from "framer-motion";
 import { useRef } from "react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { processSteps } from "@/lib/site";
 
 import { SectionHeading } from "../ui/SectionHeading";
@@ -45,9 +45,10 @@ function StepCopy({ index, progress, at }: { index: number; progress: MotionValu
 
 /** How a project runs: four steps along a line that inks itself in as you scroll. */
 export function Process() {
+  const section = useRef<HTMLElement>(null);
   const wide = useRef<HTMLDivElement>(null);
   const narrow = useRef<HTMLOListElement>(null);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
 
   // The line follows the scroll position directly, so nothing keeps animating once
   // the page has stopped moving.
@@ -57,9 +58,19 @@ export function Process() {
   const wideProgress = reduced ? full : wideScroll;
   const narrowProgress = reduced ? full : narrowScroll;
 
+  // The sheet of paper arrives a little small and grows to full width as it comes up.
+  const { scrollYProgress: arrival } = useScroll({ target: section, offset: ["start end", "start 0.25"] });
+  const grow = useTransform(arrival, [0, 1], [0.9, 1]);
+
   return (
-    <section id="process" aria-labelledby="process-title" className="px-2 md:px-4">
-      <div className="relative overflow-hidden rounded-[2rem] bg-paper text-ink md:rounded-[3rem]">
+    <section ref={section} id="process" aria-labelledby="process-title" className="px-2 md:px-4">
+      <motion.div
+        // (Marked as a reveal so that, without scripts, it is simply shown at full size.)
+        data-reveal=""
+        className="relative origin-top overflow-hidden rounded-[2rem] bg-paper text-ink md:rounded-[3rem]"
+        // (Given a size either way: dropping the style would leave the server's starting size behind.)
+        style={{ scale: reduced ? 1 : grow }}
+      >
         <div className="shell relative py-24 md:py-36">
           <SectionHeading
             index="04"
@@ -112,7 +123,7 @@ export function Process() {
             ))}
           </ol>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

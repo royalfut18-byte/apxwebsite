@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { currentMotion } from "@/lib/motion";
 
 /**
  * A slow, flowing wash of coloured light: the glow behind the hero, the contact section
@@ -177,7 +178,8 @@ export function Aurora({
       powerPreference: "low-power",
       failIfMajorPerformanceCaveat: true,
     });
-    if (!gl) return;
+    // (A context this component has already given up is handed back as it was left.)
+    if (!gl || gl.isContextLost()) return;
 
     // Some browsers hand over a software renderer without calling it a caveat. Its name
     // gives it away (SwiftShader, llvmpipe, Microsoft Basic Render Driver and friends).
@@ -229,7 +231,7 @@ export function Aurora({
     gl.uniform3fv(u("uC"), VIOLET);
     gl.clearColor(0, 0, 0, 0);
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = currentMotion() === "reduced";
     const state = {
       raf: 0,
       last: 0,

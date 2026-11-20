@@ -95,10 +95,17 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 - **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4** and **Framer Motion**.
   Scrolling is the browser's own; nothing sits between the visitor and the page.
 - `src/components/Intro.tsx`: the opening sequence, played in full on every visit to the
-  home page: four words rolling past in 3D, the wordmark drawing itself, then two curtains
-  lifting. The curtain is part of the page's HTML, so it is on screen from the first
-  paint, before any script has loaded. The wordmark shares a `layoutId` with the header
-  logo, which is how it flies into place.
+  home page: four words rolling past in 3D, then the wordmark, then two curtains lifting.
+  The curtain is part of the page's HTML, so it is on screen from the first paint, before
+  any script has loaded. The wordmark shares a `layoutId` with the header logo, which is
+  how it flies into place.
+- `src/components/LogoAssemble.tsx`: the wordmark's entrance in that sequence. Three solid
+  letters swing in and lock together, the tip of the A catches light, and a band of colour
+  runs through them. It is all CSS keyframes (in `globals.css`, under "Intro: the
+  wordmark"), so it plays smoothly however busy the page is while it loads.
+- `src/lib/motion.ts`: decides how much the site moves (see [Animations on or
+  off](#animations-on-or-off)). Components ask through `useReducedMotion`; the stylesheet
+  reads `data-motion` on `<html>`.
 - `src/components/Showcase.tsx`: the hero's wall of work. Ordinary images placed in a ring
   with CSS 3D, turned by a single CSS animation, so the graphics card does all of it and
   it works before (or without) JavaScript. Everything on top of the steady turn (the spin
@@ -115,6 +122,9 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 - `src/components/demos/`: the four small service animations. Each is only created when
   its stage is about to scroll into view, and only runs while it is on screen. The stages
   they sit on lean toward the mouse (`src/hooks/useTilt.ts`).
+- `src/components/ui/VelocityMarquee.tsx`: the moving rows of words (the two rows under the
+  hero, which pass each other in opposite directions, and the band above the contact form).
+  One looping animation each, which speeds up and leans while the page scrolls.
 - `src/components/sections/`: one file per section of the page.
 
 ### Keeping it fast
@@ -136,13 +146,32 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
 ### Built in
 
 - **Accessibility**: real headings and landmarks, visible focus styles, a skip link, labelled
-  form fields with inline errors, and support for the device's "reduce motion" setting.
-  With it on, nothing travels across the screen: the intro and the headlines fade instead
-  of sliding, the wall of work stands still (it can still be turned by hand) and there is
-  no scroll showcase, the glow holds one frame, the marquee stops and the demos show their
-  finished state. If the site looks static on your own device, check that setting first.
+  form fields with inline errors, and a calm version of the page for anyone who wants less
+  movement (below).
 - **Without JavaScript** the page still shows all of its content.
 - **SEO**: metadata, Open Graph image, structured data (`ProfessionalService`), sitemap,
   robots and a web manifest are generated from `src/lib/site.ts`.
+
+### Animations on or off
+
+Phones and computers have a "reduce motion" setting (on iPhone: Settings, Accessibility,
+Motion; on Windows: Settings, Accessibility, Visual effects, Animation effects; on a Mac:
+System Settings, Accessibility, Display). Some people need it, and plenty of devices have
+it switched on without their owner knowing.
+
+By default the site follows that setting. With it on, nothing travels across the screen:
+the intro and the headlines fade instead of sliding, the wordmark draws itself in place,
+the wall of work stands still (it can still be turned by hand) and there is no scroll
+showcase, the glow holds one frame, the moving rows of words stop and the demos show
+their finished state.
+
+Because that hides a good deal of this site, those visitors are told so: a small bar at
+the bottom of the screen says the animations are off and offers to turn them on. Either
+answer is remembered in that browser. Everyone, whatever their device says, can switch
+the animations off or on again from the foot of the page.
+
+**If the site looks still on your own device, that setting is why.** Tap "Turn on" in
+the bar at the bottom, or open the site with `?motion=full` on the end of the address to
+see the full version for that visit (`?motion=reduced` shows the calm one).
 
 `AGENTS.md` is written by Next.js for AI coding tools; it is safe to leave as it is.

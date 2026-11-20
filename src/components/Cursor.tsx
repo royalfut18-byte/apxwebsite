@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motio
 import { useEffect, useState } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Mode = "idle" | "hover" | "label" | "hidden";
 
@@ -19,7 +20,7 @@ const TEXT_FIELDS = "input, textarea, select, [contenteditable='true']";
  */
 export function Cursor() {
   const fine = useMediaQuery("(hover: hover) and (pointer: fine)");
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
   const x = useMotionValue(-200);
   const y = useMotionValue(-200);
   const sx = useSpring(x, { stiffness: 480, damping: 38, mass: 0.5 });
@@ -46,21 +47,41 @@ export function Cursor() {
       setMode("hover");
     }
 
+    // Whether the mouse is over the page at the moment.
+    let present = false;
     function onMove(e: PointerEvent) {
       if (e.pointerType !== "mouse") return;
+      present = true;
       x.set(e.clientX);
       y.set(e.clientY);
       read(e.target);
     }
-    const onLeave = () => setMode("hidden");
+    const onLeave = () => {
+      present = false;
+      setMode("hidden");
+    };
+    // The page can move under a mouse that is holding still. While it scrolls, look again at
+    // what is beneath the pointer a few times a second, so the follower never goes on
+    // describing something that has scrolled away.
+    let recheck = 0;
+    const onScroll = () => {
+      if (!present || recheck) return;
+      recheck = window.setTimeout(() => {
+        recheck = 0;
+        if (present) read(document.elementFromPoint(x.get(), y.get()));
+      }, 120);
+    };
     const onDown = () => document.documentElement.style.setProperty("--cursor-press", "0.86");
     const onUp = () => document.documentElement.style.setProperty("--cursor-press", "1");
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onUp, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.documentElement.addEventListener("pointerleave", onLeave);
     return () => {
+      window.clearTimeout(recheck);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);

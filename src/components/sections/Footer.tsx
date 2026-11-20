@@ -4,7 +4,9 @@ import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
 import { useIsClient } from "@/hooks/useIsClient";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { cn } from "@/lib/cn";
+import { chooseMotion } from "@/lib/motion";
 import { nav, site } from "@/lib/site";
 
 import { Logo } from "../Logo";
@@ -24,7 +26,7 @@ export function Footer() {
   // The wordmark rises into place as the footer comes into view.
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
   const markY = useTransform(scrollYProgress, [0, 1], ["22%", "0%"]);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useReducedMotion();
 
   return (
     <footer ref={ref} className="relative overflow-hidden border-t border-white/[0.07] bg-ink">
@@ -109,21 +111,50 @@ export function Footer() {
             <span className="mx-3 text-faint">/</span>
             <LocalTime />
           </p>
-          <button
-            type="button"
-            onClick={() => scrollToTarget(0)}
-            className="label group flex w-fit items-center gap-2 text-mute transition-colors duration-300 hover:text-bone"
-          >
-            Back to top
-            <svg
-              viewBox="0 0 12 12"
-              className="h-3 w-3 transition-transform duration-500 ease-[var(--ease-expo)] group-hover:-translate-y-1"
-              fill="none"
-              aria-hidden="true"
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+            {/* Anyone can stop the page moving, or start it again (see lib/motion.ts). */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!reduced}
+              onClick={() => chooseMotion(reduced ? "full" : "reduced")}
+              className="label group flex w-fit items-center gap-2.5 text-mute transition-colors duration-300 hover:text-bone"
             >
-              <path d="M6 11V1M1.5 5.5 6 1l4.5 4.5" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </button>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "relative block h-3.5 w-6 rounded-full border transition-colors duration-300",
+                  reduced ? "border-white/25" : "border-ember bg-ember",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-1/2 block h-2 w-2 -translate-y-1/2 rounded-full transition-[left,background-color] duration-300",
+                    reduced ? "left-[3px] bg-mute" : "left-[11px] bg-ink",
+                  )}
+                />
+              </span>
+              Animations
+              <span aria-hidden="true" className="text-faint">
+                {reduced ? "Off" : "On"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToTarget(0)}
+              className="label group flex w-fit items-center gap-2 text-mute transition-colors duration-300 hover:text-bone"
+            >
+              Back to top
+              <svg
+                viewBox="0 0 12 12"
+                className="h-3 w-3 transition-transform duration-500 ease-[var(--ease-expo)] group-hover:-translate-y-1"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path d="M6 11V1M1.5 5.5 6 1l4.5 4.5" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </footer>
