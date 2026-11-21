@@ -207,7 +207,9 @@ export function ContactForm() {
           Tell us what you <span className="accent">need.</span>
         </p>
         <p className="label flex shrink-0 items-center gap-2.5 text-mute">
-          <span className="pulse-dot block h-1.5 w-1.5 rounded-full bg-ember" />
+          {/* A plain dot. (A pulsing one here, animating while the form is still hidden down the
+              page, made the browser rework every frame from the moment the site loaded.) */}
+          <span className="block h-1.5 w-1.5 rounded-full bg-ember" />
           Taking projects
         </p>
       </div>

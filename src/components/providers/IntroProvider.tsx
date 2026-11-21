@@ -31,6 +31,12 @@ type IntroContextValue = {
   phase: IntroPhase;
   /** True once the hero may start animating in. */
   ready: boolean;
+  /**
+   * True a little before `ready`, while the curtain is still down: the moment to get the
+   * heavy things behind it into place, so that less has to happen as it lifts.
+   */
+  primed: boolean;
+  prime: () => void;
   /** True when there is no intro at all on this page load (a deep link, or any page but home). */
   skipped: boolean;
   /** The animations are turned down (see lib/motion.ts): the intro still plays, as a simple fade. */
@@ -41,6 +47,8 @@ type IntroContextValue = {
 const IntroContext = createContext<IntroContextValue>({
   phase: "done",
   ready: true,
+  primed: true,
+  prime: () => {},
   skipped: false,
   reduced: false,
   setPhase: () => {},
@@ -61,6 +69,8 @@ const WATCHDOG_MS = 12_000;
 export function IntroProvider({ children }: { children: React.ReactNode }) {
   const [requested, setRequested] = useState<IntroPhase>("intro");
   const setPhase = useCallback((next: IntroPhase) => setRequested(next), []);
+  const [early, setEarly] = useState(false);
+  const prime = useCallback(() => setEarly(true), []);
 
   // The intro plays on every visit to the home page. It is skipped only for someone
   // arriving on a deep link such as /#contact, who should land on what they asked for,
@@ -122,8 +132,16 @@ export function IntroProvider({ children }: { children: React.ReactNode }) {
   }, [target]);
 
   const value = useMemo(
-    () => ({ phase, ready: phase !== "intro", skipped, reduced, setPhase }),
-    [phase, skipped, reduced, setPhase],
+    () => ({
+      phase,
+      ready: phase !== "intro",
+      primed: early || phase !== "intro",
+      prime,
+      skipped,
+      reduced,
+      setPhase,
+    }),
+    [phase, early, prime, skipped, reduced, setPhase],
   );
 
   return (

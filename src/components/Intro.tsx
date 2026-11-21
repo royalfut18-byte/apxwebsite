@@ -90,7 +90,7 @@ function Sheet({
 }
 
 export function Intro() {
-  const { phase, skipped, reduced, setPhase } = useIntro();
+  const { phase, skipped, reduced, setPhase, prime } = useIntro();
   // -1 before the scripts take over, then one step per word, then the wordmark.
   const [step, setStep] = useState(-1);
   const count = useMotionValue(0);
@@ -130,6 +130,8 @@ export function Intro() {
       }
 
       setStep(WORDS.length);
+      // While the wordmark has the screen, the hero behind the curtain gets itself ready.
+      prime();
       await wait(logo);
       await frame();
       if (cancelled) return;

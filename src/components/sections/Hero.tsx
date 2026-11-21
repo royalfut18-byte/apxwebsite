@@ -37,7 +37,7 @@ const STAGE_SHARE = 0.56;
 type Mode = "showcase" | "pinned" | "flow";
 
 export function Hero() {
-  const { ready } = useIntro();
+  const { ready, primed } = useIntro();
   const track = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const wall = useRef<HTMLDivElement>(null);
@@ -159,7 +159,7 @@ export function Hero() {
               data-reveal=""
               className="absolute inset-0"
               initial={{ opacity: 0 }}
-              animate={{ opacity: ready ? 1 : 0 }}
+              animate={{ opacity: primed ? 1 : 0 }}
               transition={{ duration: 2.4, ease: ease.quart, delay: 0.1 }}
             >
               <Aurora
@@ -168,7 +168,7 @@ export function Hero() {
                 reach={[0.8, 0.5]}
                 gain={0.95}
                 shift={shift}
-                active={ready && !covered}
+                active={primed && !covered}
               />
             </motion.div>
             <div className="grain absolute inset-0" />
@@ -242,7 +242,7 @@ export function Hero() {
             className="hero-wall z-10 pb-5 pt-9 will-change-transform md:pt-6"
             style={reduced ? undefined : { y: wallY, scale: wallScale }}
           >
-            <Showcase show={ready} paused={covered} zoom={wallScale} />
+            <Showcase show={ready} primed={primed} paused={covered} zoom={wallScale} />
           </motion.div>
 
           {/* The far ends of the wall, and of the glow, fall away into the dark. */}

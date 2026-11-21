@@ -47,6 +47,8 @@ type ShowcaseProps = {
   show: boolean;
   /** Stop turning (the hero is covered by the page). */
   paused?: boolean;
+  /** The screens take their places (behind the intro's curtain, before `show`). */
+  primed?: boolean;
   /**
    * How much whatever contains the wall has scaled it up, if anything. The caption is
    * scaled back down by the same amount, so it stays the size it was designed at.
@@ -54,7 +56,7 @@ type ShowcaseProps = {
   zoom?: MotionValue<number>;
 };
 
-export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
+export function Showcase({ show, primed = show, paused = false, zoom }: ShowcaseProps) {
   const unscaled = useMotionValue(1);
   const captionScale = useTransform(zoom ?? unscaled, (v) => 1 / (v || 1));
   const stage = useRef<HTMLDivElement>(null);
@@ -273,6 +275,13 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
   }, [paused, reduced]);
 
   // Arrive spinning, then settle.
+  // Decode every screen's picture ahead of time, while the intro is still playing.
+  useEffect(() => {
+    stage.current?.querySelectorAll("img").forEach((img) => {
+      img.decode?.().catch(() => {});
+    });
+  }, []);
+
   useEffect(() => {
     if (show && !reduced) control.current?.push(-ENTRANCE_DEG / TAU);
   }, [show, reduced]);
@@ -285,7 +294,7 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
         ref={stage}
         aria-hidden="true"
         className="wall"
-        data-show={show ? "" : undefined}
+        data-show={primed ? "" : undefined}
 
         style={{ "--spread": SPREAD.toFixed(4) } as React.CSSProperties}
       >
@@ -315,7 +324,9 @@ export function Showcase({ show, paused = false, zoom }: ShowcaseProps) {
                     alt=""
                     // A little larger than it rests at, for when the showcase enlarges the wall.
                     sizes="(min-width: 768px) 34vw, 44vw"
-                    loading={i < 2 || i === COUNT - 1 ? "eager" : "lazy"}
+                    // All of them up front: a picture that is first decoded as it swings into view
+                    // makes the turn stutter.
+                    loading="eager"
                     // They sit behind the intro for its first few seconds: let the scripts and
                     // fonts that the intro needs have the connection first.
                     fetchPriority="low"

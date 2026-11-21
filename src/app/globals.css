@@ -346,16 +346,21 @@ html.is-locked body {
     border-radius: calc(var(--w) * 0.03);
     background: var(--color-ink-800);
     box-shadow: 0 calc(var(--w) * 0.09) calc(var(--w) * 0.16) calc(var(--w) * -0.07) rgb(0 0 0 / 0.8);
-    /* A faint reflection, as if the screens stood on a polished floor. (Not in Firefox,
-       which has no equivalent; nothing is lost there but the shine.) */
-    -webkit-box-reflect: below calc(var(--w) * 0.012)
-      linear-gradient(to bottom, rgb(0 0 0 / 0) 62%, rgb(0 0 0 / 0.26) 100%);
+    /* (A faint reflection is added below, as if the screens stood on a polished floor. Not in
+       Firefox, which has no equivalent; nothing is lost there but the shine.) */
     opacity: 0;
     transform: translateY(24%) scale(0.9);
     transition:
       opacity 0.8s ease-out,
       transform 1.5s var(--ease-expo);
     transition-delay: calc(var(--order) * 80ms + 250ms);
+  }
+  /* The reflection doubles what the graphics card draws for every screen, so phones go without. */
+  @media (min-width: 768px) {
+    .wall-rise {
+      -webkit-box-reflect: below calc(var(--w) * 0.012)
+        linear-gradient(to bottom, rgb(0 0 0 / 0) 62%, rgb(0 0 0 / 0.26) 100%);
+    }
   }
   .wall[data-show] .wall-rise {
     opacity: 1;
