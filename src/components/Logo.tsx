@@ -4,7 +4,7 @@ import { motion, type Transition } from "framer-motion";
 import { useId } from "react";
 
 /**
- * The APX wordmark.
+ * The APXS wordmark.
  *
  * Each letter is a single stroked path clipped to a flat cap-height and baseline,
  * so the same geometry can be drawn on (the intro) or shown solid (everywhere else).
@@ -19,6 +19,8 @@ export const LETTERS = [
   // X (two strokes)
   "M121.9 -8 L178.1 64",
   "M178.1 -8 L121.9 64",
+  // S
+  "M229 5.5 H208 A11.25 11.25 0 0 0 208 28 H214 A11.25 11.25 0 0 1 214 50.5 H193",
 ];
 
 export const STROKE = 11;
@@ -34,7 +36,7 @@ type LogoProps = {
   title?: string;
 };
 
-export function Logo({ className, draw = false, delay = 0, play = true, title = "APX" }: LogoProps) {
+export function Logo({ className, draw = false, delay = 0, play = true, title = "APXS" }: LogoProps) {
   const uid = useId().replace(/:/g, "");
   const boxId = `apx-box-${uid}`;
   const tipId = `apx-tip-${uid}`;
@@ -46,7 +48,7 @@ export function Logo({ className, draw = false, delay = 0, play = true, title = 
 
   return (
     <svg
-      viewBox="0 0 179 56"
+      viewBox="0 0 231 56"
       className={className}
       data-draw={draw ? "" : undefined}
       role="img"
@@ -56,7 +58,7 @@ export function Logo({ className, draw = false, delay = 0, play = true, title = 
     >
       <defs>
         <clipPath id={boxId}>
-          <rect x="0" y="0" width="179" height="56" />
+          <rect x="0" y="0" width="231" height="56" />
         </clipPath>
         <clipPath id={tipId}>
           <rect x="0" y="0" width="60" height="15.5" />

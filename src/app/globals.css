@@ -621,19 +621,19 @@ html.intro-live .intro-root {
 
 /* ---------------------------------------------------------------------------
    Intro: the wordmark
-   Three solid letters swing in, the tip of the A catches light, a band of colour
+   Four solid letters swing in, the tip of the A catches light, a band of colour
    runs through them, and the depth folds away (see LogoAssemble.tsx). Times are
    from the moment the wordmark appears; Intro.tsx waits for the same total.
    --------------------------------------------------------------------------- */
 
 .logo-3d {
   /* The width of the wordmark. Everything else is a share of it. */
-  --lw: clamp(12.5rem, 32vw, 25rem);
+  --lw: clamp(15rem, 38vw, 30rem);
   /* One layer of a letter's depth. */
   --ld: calc(var(--lw) * 0.0046);
   position: relative;
   width: var(--lw);
-  height: calc(var(--lw) * 56 / 179);
+  height: calc(var(--lw) * 56 / 231);
   perspective: calc(var(--lw) * 2.3);
 }
 /* The whole wordmark sways once as the letters land, which is what shows their depth. */
@@ -652,7 +652,7 @@ html.intro-live .intro-root {
   /* Turns about the middle of its own depth. */
   transform-origin: 50% 50% calc(var(--ld) * -5);
   animation: logo-swing 1s cubic-bezier(0.33, 1, 0.68, 1) both;
-  animation-delay: calc(var(--i) * 110ms + 60ms);
+  animation-delay: calc(var(--i) * 85ms + 60ms);
   will-change: transform;
 }
 .logo-slab,
@@ -673,14 +673,14 @@ html.intro-live .intro-root {
    itself would press its depth flat for as long as the fade lasted. */
 .logo-face {
   animation: logo-appear 0.16s ease-out both;
-  animation-delay: calc(var(--i) * 110ms + 60ms);
+  animation-delay: calc(var(--i) * 85ms + 60ms);
 }
 .logo-slab {
   transform: translateZ(calc(var(--ld) * var(--k) * -1));
   animation:
     logo-appear 0.16s ease-out both,
     logo-fold 0.26s ease-in both;
-  animation-delay: calc(var(--i) * 110ms + 60ms), 1.54s;
+  animation-delay: calc(var(--i) * 85ms + 60ms), 1.54s;
 }
 /* The ember tip of the A: unlit until the letters have landed. */
 .logo-tip {

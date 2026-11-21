@@ -8,7 +8,7 @@ const ROWS = [
   { words: [...WORDS.slice(2), ...WORDS.slice(0, 2)], seconds: 37, reverse: true, solid: 1 },
 ];
 
-/** The four things APX does, on a loop, between the hero and the services. */
+/** The four things APXS does, on a loop, between the hero and the services. */
 export function Ticker() {
   return (
     <div className="border-b border-white/[0.07] py-6 md:py-9">

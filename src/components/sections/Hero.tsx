@@ -212,7 +212,7 @@ export function Hero() {
               className="mt-5 max-w-[37rem] md:mt-[clamp(1rem,2.6svh,1.75rem)] [@media(max-height:659px)]:hidden md:[@media(max-height:719px)]:hidden"
             >
               <p className="text-[1.0625rem] leading-relaxed text-bone-dim md:text-lg">
-                APX builds websites that win work, gets them found on Google, runs the Instagram, and builds
+                APXS builds websites that win work, gets them found on Google, runs the Instagram, and builds
                 the tools that keep customers coming back.
               </p>
             </Reveal>

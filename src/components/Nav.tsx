@@ -107,7 +107,7 @@ export function Nav() {
           <a
             href={home ? "#top" : "/"}
             aria-label={`${site.name} home`}
-            className="relative block h-[18px] w-[58px] text-bone md:h-5 md:w-16"
+            className="relative block h-[18px] w-[74px] text-bone md:h-5 md:w-[82px]"
 
             onClick={() => setOpen(false)}
           >
@@ -123,7 +123,7 @@ export function Nav() {
             {/* The logo normally arrives from the intro. Without scripts there is no intro, so show it outright. */}
             <noscript>
               <svg
-                viewBox="0 0 179 56"
+                viewBox="0 0 231 56"
                 className="absolute inset-0 h-full w-full"
                 fill="none"
                 overflow="hidden"
@@ -134,6 +134,7 @@ export function Nav() {
                   <path d="M73.5 64 V5.5 H92 A14 14 0 0 1 92 33.5 H73.5" />
                   <path d="M121.9 -8 L178.1 64" />
                   <path d="M178.1 -8 L121.9 64" />
+                  <path d="M229 5.5 H208 A11.25 11.25 0 0 0 208 28 H214 A11.25 11.25 0 0 1 214 50.5 H193" />
                 </g>
               </svg>
             </noscript>

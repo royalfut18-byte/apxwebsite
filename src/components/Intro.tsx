@@ -13,8 +13,8 @@ import { useIntro } from "./providers/IntroProvider";
 /**
  * The opening sequence.
  *
- * Four words (what APX does) roll past in 3D, like the faces of a drum, while a counter
- * climbs. Then the wordmark arrives as three solid letters that swing in and lock together,
+ * Four words (what APXS does) roll past in 3D, like the faces of a drum, while a counter
+ * climbs. Then the wordmark arrives as four solid letters that swing in and lock together,
  * the tip of the A catches light, and a band of colour runs through them (LogoAssemble.tsx).
  * Two curtains lift: ink first, with a band of colour behind it. The wordmark does not fade
  * out. It flies up into the header and becomes the logo (it shares a `layoutId` with the
@@ -159,7 +159,7 @@ export function Intro() {
             key="intro"
             className="intro-root pointer-events-auto fixed inset-0 z-50"
             role="status"
-            aria-label="Loading APX"
+            aria-label="Loading APXS"
             exit={reduced ? { opacity: 0 } : undefined}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
@@ -210,7 +210,7 @@ export function Intro() {
                   <div className="flex items-end justify-between">
                     <p className="label flex items-center gap-2.5 text-mute">
                       <span className="pulse-dot block h-1.5 w-1.5 rounded-full bg-ember" />
-                      APX <span className="text-faint">/</span> Web studio
+                      APXS <span className="text-faint">/</span> Web studio
                     </p>
                     <motion.span className="font-mono text-[clamp(1.5rem,3.2vw,2.5rem)] font-medium leading-none tabular-nums tracking-tight text-bone">
                       {digits}
@@ -235,11 +235,11 @@ export function Intro() {
       {showLogo && (
         <div className="intro-root pointer-events-none fixed inset-0 z-[65] grid place-items-center">
           {reduced ? (
-            <motion.div layoutId="apx-logo" className="w-[clamp(11rem,28vw,23rem)] text-bone">
+            <motion.div layoutId="apx-logo" className="w-[clamp(13rem,34vw,28rem)] text-bone">
               <Logo draw className="block h-auto w-full" />
             </motion.div>
           ) : (
-            <motion.div layoutId="apx-logo" className="logo-3d text-bone" role="img" aria-label="APX">
+            <motion.div layoutId="apx-logo" className="logo-3d text-bone" role="img" aria-label="APXS">
               <LogoAssemble />
             </motion.div>
           )}

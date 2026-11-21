@@ -1,8 +1,8 @@
-# APX
+# APXS
 
-The website for APX: websites, SEO, Instagram and custom tools for Australian businesses.
+The website for APXS: websites, SEO, Instagram and custom tools for Australian businesses.
 
-One long page, built to show the kind of work APX does: a Framer Motion intro, a hero where
+One long page, built to show the kind of work APXS does: a Framer Motion intro, a hero where
 real client sites stand in a slowly turning 3D ring over a flowing glow, animated demos of
 each service, and a portfolio of real client sites (only one of them shown by name).
 
@@ -11,11 +11,11 @@ each service, and a portfolio of real client sites (only one of them shown by na
 The site is ready to deploy, but a few details were filled in as placeholders. They all
 live in `src/lib/site.ts`:
 
-- [ ] **`email`**: currently `hello@apx.com.au`. Every "email us" link and the contact form
+- [ ] **`email`**: currently `hello@apxs.com.au`. Every "email us" link and the contact form
       send to this address, so it must be a real inbox.
 - [ ] **`phone`** and **`instagram`**: blank, which hides them. Add them if you want them shown.
 - [ ] **`location`** and **`timeZone`**: currently `Australia` and Sydney time (the live clock).
-- [ ] **`url`**: currently `https://apx.com.au`. Change it if the site will live elsewhere.
+- [ ] **`url`**: currently `https://apxs.com.au`. Change it if the site will live elsewhere.
 - [ ] Optional: add a `RESEND_API_KEY` so enquiries arrive in your inbox directly
       (see [Contact form](#contact-form)).
 
@@ -87,7 +87,7 @@ losing the message. A hidden honeypot field filters out basic bots.
 ## Deploy
 
 It is a standard Next.js app. On Vercel: import the repository and deploy; no configuration
-is needed. Point `apx.com.au` at the project, and if the domain is different, update `url`
+is needed. Point `apxs.com.au` at the project, and if the domain is different, update `url`
 in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
 
 ## How it is put together
@@ -99,7 +99,7 @@ in `src/lib/site.ts` so the canonical URL, sitemap and share image follow.
   The curtain is part of the page's HTML, so it is on screen from the first paint, before
   any script has loaded. The wordmark shares a `layoutId` with the header logo, which is
   how it flies into place.
-- `src/components/LogoAssemble.tsx`: the wordmark's entrance in that sequence. Three solid
+- `src/components/LogoAssemble.tsx`: the wordmark's entrance in that sequence. Four solid
   letters swing in and lock together, the tip of the A catches light, and a band of colour
   runs through them. It is all CSS keyframes (in `globals.css`, under "Intro: the
   wordmark"), so it plays smoothly however busy the page is while it loads.

@@ -18,11 +18,11 @@ type SiteConfig = {
 };
 
 export const site: SiteConfig = {
-  name: "APX",
-  legalName: "APX",
-  url: "https://apx.com.au",
+  name: "APXS",
+  legalName: "APXS",
+  url: "https://apxs.com.au",
   /** Where enquiries go. Used by the contact form and every "email us" link. */
-  email: "hello@apx.com.au",
+  email: "hello@apxs.com.au",
   /** Optional. Leave blank to hide. Use full international format, e.g. "+61 400 000 000". */
   phone: "",
   /** Optional. Just the handle, without the @. Leave blank to hide. */
@@ -33,7 +33,7 @@ export const site: SiteConfig = {
   timeZone: "Australia/Sydney",
   tagline: "We take local businesses to the top.",
   description:
-    "APX builds fast, good-looking websites for Australian businesses, then gets them found on Google, runs the Instagram and builds custom tools like SMS senders. One team, pulling in one direction.",
+    "APXS builds fast, good-looking websites for Australian businesses, then gets them found on Google, runs the Instagram and builds custom tools like SMS senders. One team, pulling in one direction.",
   shortDescription: "Websites, SEO, Instagram and custom tools for Australian businesses.",
 };
 

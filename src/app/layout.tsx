@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     "social media management",
     "custom business software",
     "SMS sender",
-    "APX",
+    "APXS",
   ],
   authors: [{ name: site.name, url: site.url }],
   creator: site.name,

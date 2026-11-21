@@ -1,7 +1,7 @@
 import { LETTERS, STROKE } from "./Logo";
 
 /**
- * The wordmark as the intro's closing piece: three solid letters that swing in out of the
+ * The wordmark as the intro's closing piece: four solid letters that swing in out of the
  * dark, one after another, and lock together. As the last one lands the tip of the A
  * catches light (a ring, a few sparks, a glow behind), and a band of colour runs through
  * the letters. Then the depth folds away, leaving the flat wordmark that flies to the header.
@@ -13,7 +13,7 @@ import { LETTERS, STROKE } from "./Logo";
  */
 
 /** The wordmark's box, in its own units (see Logo.tsx). */
-const WIDTH = 179;
+const WIDTH = 231;
 const HEIGHT = 56;
 
 /** Where each letter sits in that box. */
@@ -21,6 +21,7 @@ const GLYPHS = [
   { name: "a", x: 0, w: 56, paths: [LETTERS[0]] },
   { name: "p", x: 68, w: 43.5, paths: [LETTERS[1]] },
   { name: "x", x: 121.16, w: 57.68, paths: [LETTERS[2], LETTERS[3]] },
+  { name: "s", x: 189, w: 42, paths: [LETTERS[4]] },
 ];
 
 /** The tip of the A: its position in the box, and how far down the ember runs. */
