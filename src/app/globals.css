@@ -543,6 +543,24 @@ html.is-locked body {
   html.is-locked .scroll-hint {
     animation: none;
   }
+
+  /* The booking page (/book) rises in from the first paint, without waiting for scripts.
+     Each piece sets its own animation-delay. */
+  .book-rise {
+    animation: book-rise 0.9s var(--ease-expo) both;
+  }
+}
+
+@keyframes book-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.1rem);
+  }
+}
+@keyframes book-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 @keyframes blink {
@@ -953,6 +971,10 @@ html[data-motion="reduced"] .tilt {
 }
 html[data-motion="reduced"] .process-sheet {
   animation: none;
+}
+/* The booking page still fades in, but nothing travels. */
+html[data-motion="reduced"] .book-rise {
+  animation-name: book-fade;
 }
 /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
 html[data-motion="reduced"] .wall-ring {

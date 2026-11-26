@@ -118,6 +118,31 @@ keep it in Vercel's settings rather than in the code. See `.env.example`. If del
 fails, the form falls back to the mail app rather than losing the message. A hidden
 honeypot field filters out basic bots, which are never forwarded.
 
+## Booking a call (/book)
+
+`apxs.com.au/book` goes straight to booking a free 10-minute call, with no intro: pick a day,
+pick a time, give a name, phone number and email, done. It is a link to share on its own
+(an Instagram bio, an email signature, a message). "See the main site" on it is a full page
+load, so the home page plays its intro as usual.
+
+- **The times come from APECS**, which keeps the calendar: weekdays 9 am to 5 pm Sydney time,
+  every 15 minutes, at least an hour ahead, up to two weeks out, and never over anything
+  already in its Calendar. Visitors see them in their own time zone (with Sydney's alongside).
+- **Each booking lands in APECS's Calendar** as "Call: name (business)", with their phone
+  number, email and what they want to talk about, and both of you get a notification. The
+  visitor gets links to put the call in Google Calendar or Apple / Outlook.
+- **Nothing to set up for APXS**: when `LEADS_WEBHOOK_URL` is APECS's website-leads address
+  (`…/api/leads/website`), bookings go to the address next to it (`…/api/calls/website`) with
+  the same `LEADS_WEBHOOK_SECRET`. Only the server talks to APECS; the key never reaches the
+  browser. To send bookings somewhere else, set `BOOKING_API_URL` and `BOOKING_API_SECRET`.
+- **If APECS can't be reached** (or every time is taken), the page says so and offers an
+  email with everything already filled in, so a booking is never lost. Someone grabbing the
+  same time a moment earlier is told to pick another, and keeps what they typed.
+- `src/app/book/page.tsx` is the page, `src/components/booking/BookingPanel.tsx` the picker
+  and form, `src/lib/booking.ts` the shared rules and date formatting, `src/lib/calls.ts` the
+  link to APECS, and `src/app/api/book/` the two endpoints the page calls. A hidden honeypot
+  field and a limit of four bookings an hour from one place keep bots out.
+
 ## Deploy
 
 It is a standard Next.js app. On Vercel: import the repository and deploy; no configuration
