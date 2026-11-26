@@ -89,6 +89,11 @@ lead goes to both places.
 | `CONTACT_TO_EMAIL`     | Where emails go. Defaults to the email in `site.ts`.                                              |
 | `CONTACT_FROM_EMAIL`   | The sender. Defaults to `website@` your domain, which must be verified with Resend.               |
 
+**For APXS** the live site sends leads to APECS: `LEADS_WEBHOOK_URL` is
+`https://apecs1.vercel.app/api/leads/website`, and the `LEADS_WEBHOOK_SECRET` in this project's
+settings must match the one in the APECS project's settings (APECS's SETUP.md, part 6). Each
+lead then appears in APECS under Leads to contact, with a notification.
+
 **What the webhook receives.** Discord and Slack channel webhooks and Google Chat spaces get
 a readable message (name, email, business, what they need, and their message). Any other
 address gets the lead as JSON:
