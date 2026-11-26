@@ -498,6 +498,21 @@ html.is-locked body {
     will-change: transform;
   }
 
+  /*
+   * The "How it works" sheet grows from 90% to full size as it comes up the screen: from
+   * the moment its top edge appears at the bottom, until that edge is a quarter of the way
+   * down from the top (Process.tsx). Where the browser can tie an animation to the scroll
+   * position itself, it is done here and run by the graphics card, so the sheet is not
+   * redrawn on every frame of scrolling. Elsewhere the script does exactly the same.
+   */
+  @supports (animation-timeline: view()) {
+    .process-sheet {
+      animation: process-grow linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 75vh;
+    }
+  }
+
   /* Film grain over the glows: hides the banding that soft gradients show on dark screens. */
   .grain {
     background-image: url("/grain.png");
@@ -519,9 +534,14 @@ html.is-locked body {
     animation: pulse-ring 2.4s var(--ease-quart) infinite;
   }
 
-  /* The little ember segment that runs down the hero's "scroll" line. */
+  /* The little ember segment that runs down the hero's "scroll" line. Not while the page is
+     locked (behind the intro's curtain, or the menu): hidden there, the browser animates it
+     with the page itself, every frame, instead of with the graphics card. */
   .scroll-hint {
     animation: scroll-hint 2.2s var(--ease-swift) infinite;
+  }
+  html.is-locked .scroll-hint {
+    animation: none;
   }
 }
 
@@ -568,6 +588,14 @@ html.is-locked body {
   }
   to {
     transform: translateZ(calc(var(--r) * -1)) rotateY(-360deg);
+  }
+}
+@keyframes process-grow {
+  from {
+    transform: scale(0.9);
+  }
+  to {
+    transform: scale(1);
   }
 }
 @keyframes wall-caption {
@@ -680,12 +708,14 @@ html.intro-live .intro-root {
   animation: logo-appear 0.16s ease-out both;
   animation-delay: calc(var(--i) * 85ms + 60ms);
 }
+/* Each copy fades in as its letter lands, and out again as the depth folds away (1.54s to
+   1.8s). That is written as one animation per copy, not two: an element with two opacity
+   animations at once is animated by the page itself, frame by frame, rather than by the
+   graphics card. The keyframes are per letter (logo-slab-0 to -3, set in LogoAssemble.tsx),
+   because each letter lands at its own moment: 85ms apart, from 60ms. */
 .logo-slab {
   transform: translateZ(calc(var(--ld) * var(--k) * -1));
-  animation:
-    logo-appear 0.16s ease-out both,
-    logo-fold 0.26s ease-in both;
-  animation-delay: calc(var(--i) * 85ms + 60ms), 1.54s;
+  animation: logo-slab-0 1.8s linear both;
 }
 /* The ember tip of the A: unlit until the letters have landed. */
 .logo-tip {
@@ -791,8 +821,64 @@ html.intro-live .intro-root {
     opacity: 0;
   }
 }
-@keyframes logo-fold {
-  to {
+/* (Percentages of 1.8s. In at 60/145/230/315ms over 160ms, out from 1540ms.) */
+@keyframes logo-slab-0 {
+  0%,
+  3.3333% {
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  12.2222%,
+  85.5556% {
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes logo-slab-1 {
+  0%,
+  8.0556% {
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  16.9444%,
+  85.5556% {
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes logo-slab-2 {
+  0%,
+  12.7778% {
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  21.6667%,
+  85.5556% {
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes logo-slab-3 {
+  0%,
+  17.5% {
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  26.3889%,
+  85.5556% {
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
     opacity: 0;
   }
 }
@@ -864,6 +950,9 @@ html[data-motion="reduced"] .pulse-dot::after {
 }
 html[data-motion="reduced"] .tilt {
   transform: none;
+}
+html[data-motion="reduced"] .process-sheet {
+  animation: none;
 }
 /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
 html[data-motion="reduced"] .wall-ring {

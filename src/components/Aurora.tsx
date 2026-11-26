@@ -36,8 +36,13 @@ type AuroraProps = {
    * same units as `focus`. The light eases toward it, so it can follow a pointer or a scroll.
    */
   shift?: () => [number, number];
-  /** Hold off drawing until true (the hero waits for the intro this way). */
+  /** Hold off animating until true (the hero waits for the intro this way). */
   active?: boolean;
+  /**
+   * While not yet `active`: draw a single still frame, so that everything is set up and
+   * on screen before it starts moving (the hero does this behind the intro's curtain).
+   */
+  warm?: boolean;
 };
 
 const LONG_SIDE = 240;
@@ -154,16 +159,17 @@ export function Aurora({
   gain = 1,
   shift,
   active = true,
+  warm = false,
 }: AuroraProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [live, setLive] = useState(false);
 
   // Latest props for the loop, and a way to restart it, without rebuilding the scene.
-  const latest = useRef({ active, focus, reach, gain, shift });
+  const latest = useRef({ active, warm, focus, reach, gain, shift });
   const wake = useRef<(() => void) | null>(null);
   useEffect(() => {
-    latest.current = { active, focus, reach, gain, shift };
-    if (active) wake.current?.();
+    latest.current = { active, warm, focus, reach, gain, shift };
+    if (active || warm) wake.current?.();
   });
 
   useEffect(() => {
@@ -278,7 +284,12 @@ export function Aurora({
 
     function loop(now: number) {
       state.raf = 0;
-      if (state.lost || !state.visible || document.hidden || !latest.current.active) return;
+      if (state.lost || !state.visible || document.hidden) return;
+      if (!latest.current.active) {
+        // Not moving yet. One still frame, if asked for, and then nothing more until it is.
+        if (latest.current.warm && !state.drawn) draw();
+        return;
+      }
       const since = state.last ? now - state.last : FRAME_MS;
       if (since >= FRAME_MS - 2) {
         if (!reduced) state.time += Math.min(since, 100) / 1000;

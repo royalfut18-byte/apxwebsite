@@ -95,7 +95,14 @@ export function LogoAssemble() {
               <span
                 key={k}
                 className="logo-slab"
-                style={{ "--k": SLABS - k, color: SIDES[SLABS - 1 - k] } as React.CSSProperties}
+                style={
+                  {
+                    "--k": SLABS - k,
+                    color: SIDES[SLABS - 1 - k],
+                    // Each letter lands at its own moment, so each has its own keyframes.
+                    animationName: `logo-slab-${i}`,
+                  } as React.CSSProperties
+                }
               >
                 <Strokes paths={glyph.paths} x={glyph.x} w={glyph.w} />
               </span>

@@ -1,8 +1,7 @@
 "use client";
 
-import { motion, useMotionValue, useTransform, type MotionValue } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { scrollToProject } from "@/lib/scroll";
@@ -24,7 +23,6 @@ const SAMPLES = 24;
 const MAX_PUSH = 0.55;
 /** It arrives with a push worth this many degrees. */
 const ENTRANCE_DEG = 150;
-/** Scrolling the page by one pixel pushes it by this many degrees. */
 
 type Control = { push: (degPerMs: number) => void; setTurning: (on: boolean) => void };
 
@@ -49,16 +47,9 @@ type ShowcaseProps = {
   paused?: boolean;
   /** The screens take their places (behind the intro's curtain, before `show`). */
   primed?: boolean;
-  /**
-   * How much whatever contains the wall has scaled it up, if anything. The caption is
-   * scaled back down by the same amount, so it stays the size it was designed at.
-   */
-  zoom?: MotionValue<number>;
 };
 
-export function Showcase({ show, primed = show, paused = false, zoom }: ShowcaseProps) {
-  const unscaled = useMotionValue(1);
-  const captionScale = useTransform(zoom ?? unscaled, (v) => 1 / (v || 1));
+export function Showcase({ show, primed = show, paused = false }: ShowcaseProps) {
   const stage = useRef<HTMLDivElement>(null);
   const spinner = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLDivElement>(null);
@@ -269,7 +260,7 @@ export function Showcase({ show, primed = show, paused = false, zoom }: Showcase
     };
   }, [reduced]);
 
-  // Stop turning while the page has covered the hero.
+  // Stop turning when asked to.
   useEffect(() => {
     control.current?.setTurning(!paused);
   }, [paused, reduced]);
@@ -288,6 +279,48 @@ export function Showcase({ show, primed = show, paused = false, zoom }: Showcase
 
   const { project } = screens[front];
 
+  // The twelve screens never change, so they are built once. (Otherwise every change of
+  // caption, and the intro handing over, would rebuild all twelve pictures.)
+  const faces = useMemo(
+    () =>
+      screens.map((screen, i) => (
+        <div
+          key={i}
+          data-index={i}
+          className="wall-screen"
+          style={{ transform: `rotateY(${i * STEP}deg) translateZ(var(--r))` }}
+        >
+          <div
+            className="wall-rise"
+            data-reveal=""
+            // The screen facing the visitor arrives first, then its neighbours, outward.
+            style={{ "--order": Math.min(i, COUNT - i) } as React.CSSProperties}
+          >
+            <div className="wall-bar">
+              <i />
+              <i />
+              <i />
+              <span>{screen.project.displayUrl}</span>
+            </div>
+            <Image
+              src={screen.image}
+              alt=""
+              sizes="(min-width: 768px) 34vw, 44vw"
+              // All of them up front: a picture that is first decoded as it swings into view
+              // makes the turn stutter.
+              loading="eager"
+              // They sit behind the intro for its first few seconds: let the scripts and
+              // fonts that the intro needs have the connection first.
+              fetchPriority="low"
+              draggable={false}
+              className="block h-auto w-full"
+            />
+          </div>
+        </div>
+      )),
+    [],
+  );
+
   return (
     <div className="relative">
       <div
@@ -300,48 +333,13 @@ export function Showcase({ show, primed = show, paused = false, zoom }: Showcase
       >
         <div ref={spinner} className="wall-spin">
           <div ref={ring} className="wall-ring">
-            {screens.map((screen, i) => (
-              <div
-                key={i}
-                data-index={i}
-                className="wall-screen"
-                style={{ transform: `rotateY(${i * STEP}deg) translateZ(var(--r))` }}
-              >
-                <div
-                  className="wall-rise"
-                  data-reveal=""
-                  // The screen facing the visitor arrives first, then its neighbours, outward.
-                  style={{ "--order": Math.min(i, COUNT - i) } as React.CSSProperties}
-                >
-                  <div className="wall-bar">
-                    <i />
-                    <i />
-                    <i />
-                    <span>{screen.project.displayUrl}</span>
-                  </div>
-                  <Image
-                    src={screen.image}
-                    alt=""
-                    // A little larger than it rests at, for when the showcase enlarges the wall.
-                    sizes="(min-width: 768px) 34vw, 44vw"
-                    // All of them up front: a picture that is first decoded as it swings into view
-                    // makes the turn stutter.
-                    loading="eager"
-                    // They sit behind the intro for its first few seconds: let the scripts and
-                    // fonts that the intro needs have the connection first.
-                    fetchPriority="low"
-                    draggable={false}
-                    className="block h-auto w-full"
-                  />
-                </div>
-              </div>
-            ))}
+            {faces}
           </div>
         </div>
       </div>
 
       {/* Names the client facing the visitor, and takes them to that project. */}
-      <motion.a
+      <a
         href="#work"
         onClick={(e) => {
           e.preventDefault();
@@ -349,7 +347,6 @@ export function Showcase({ show, primed = show, paused = false, zoom }: Showcase
         }}
 
         className="wall-caption label group"
-        style={{ scale: captionScale }}
       >
         <span className="pulse-dot block h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
         <span key={project.slug} className="wall-caption-text">
@@ -366,7 +363,7 @@ export function Showcase({ show, primed = show, paused = false, zoom }: Showcase
           <path d="M6 1v10M1.5 6.5 6 11l4.5-4.5" stroke="currentColor" strokeWidth="1.4" />
         </svg>
         <span className="sr-only">: see this project</span>
-      </motion.a>
+      </a>
     </div>
   );
 }

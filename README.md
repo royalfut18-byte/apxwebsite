@@ -68,21 +68,50 @@ structured data.
 
 The form posts to `src/app/api/contact/route.ts`.
 
-- **Out of the box** it needs no setup. With no mail service configured, the form opens the
+- **Out of the box** it needs no setup. With nothing configured, the form opens the
   visitor's own mail app with their message filled in and addressed to the email in
   `site.ts`.
-- **To deliver enquiries straight to your inbox**, create a [Resend](https://resend.com) API
-  key and set the variables below (in Vercel: Project, Settings, Environment Variables).
-  The form then sends in-page and shows a confirmation.
+- **To send every lead straight into APECS** (or any other platform or chat that accepts
+  a webhook), set `LEADS_WEBHOOK_URL` to the address it gives you. See below.
+- **To have enquiries emailed to you**, create a [Resend](https://resend.com) API key and
+  set `RESEND_API_KEY`.
 
-| Variable             | Required | What it does                                                                        |
-| -------------------- | -------- | ----------------------------------------------------------------------------------- |
-| `RESEND_API_KEY`     | yes      | Turns on in-page delivery.                                                          |
-| `CONTACT_TO_EMAIL`   | no       | Where enquiries are sent. Defaults to the email in `site.ts`.                       |
-| `CONTACT_FROM_EMAIL` | no       | The sender. Defaults to `website@` your domain, which must be verified with Resend. |
+Either one, or both, can be set (in Vercel: Project, Settings, Environment Variables, then
+redeploy). With either, the form sends in-page and shows a confirmation; with both, each
+lead goes to both places.
 
-See `.env.example`. If delivery ever fails, the form falls back to the mail app rather than
-losing the message. A hidden honeypot field filters out basic bots.
+| Variable               | What it does                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `LEADS_WEBHOOK_URL`    | Where each lead is posted: the APECS main chat's webhook address, for example.                    |
+| `LEADS_WEBHOOK_SECRET` | Optional. Sent as `Authorization: Bearer <secret>`, for platforms that ask for a key.             |
+| `LEADS_WEBHOOK_FORMAT` | Optional: `discord`, `slack`, `google-chat` or `json`. Worked out from the address when left out. |
+| `RESEND_API_KEY`       | Turns on email delivery.                                                                          |
+| `CONTACT_TO_EMAIL`     | Where emails go. Defaults to the email in `site.ts`.                                              |
+| `CONTACT_FROM_EMAIL`   | The sender. Defaults to `website@` your domain, which must be verified with Resend.               |
+
+**What the webhook receives.** Discord and Slack channel webhooks and Google Chat spaces get
+a readable message (name, email, business, what they need, and their message). Any other
+address gets the lead as JSON:
+
+```json
+{
+  "type": "lead",
+  "source": "apxs.com.au",
+  "submittedAt": "2026-11-26T07:32:04.009Z",
+  "name": "Jordan Smith",
+  "email": "jordan@example.com",
+  "business": "Jordan Plumbing",
+  "needs": ["Website", "SEO"],
+  "message": "We need a site that gets us more calls.",
+  "subject": "New enquiry from Jordan Plumbing",
+  "text": "Name: Jordan Smith\nEmail: …"
+}
+```
+
+The webhook address is as good as a password (anyone who has it can post to that chat), so
+keep it in Vercel's settings rather than in the code. See `.env.example`. If delivery ever
+fails, the form falls back to the mail app rather than losing the message. A hidden
+honeypot field filters out basic bots, which are never forwarded.
 
 ## Deploy
 
@@ -140,6 +169,13 @@ The site is animation-heavy, so it follows a few rules. Worth keeping to when yo
   all on phones.
 - **Images are sized for where they are drawn.** The portfolio captures are trimmed, served
   as WebP and capped at 1440 pixels wide (`next.config.ts`).
+- **Some animations quietly fall back to the main thread**, where they are redrawn by the
+  page on every frame and make everything else on it more expensive. Three to watch for:
+  two animations of the same property on one element at once (give each its own element,
+  or write them as one set of keyframes, as the intro's logo does); an animation running on
+  something hidden (the hero's scroll hint waits for the curtain to lift); and anything
+  driven by script frame by frame that the browser could run itself (the intro's counter
+  and the logo's flight into the header are each started once and left to the browser).
 
 ### Built in
 

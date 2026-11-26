@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useScroll, useTransform, type MotionValue } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useSyncExternalStore } from "react";
 
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { processSteps } from "@/lib/site";
@@ -9,6 +9,10 @@ import { processSteps } from "@/lib/site";
 import { SectionHeading } from "../ui/SectionHeading";
 
 const COUNT = processSteps.length;
+
+const noop = () => () => {};
+/** Whether the browser can tie an animation to the scroll position by itself (see .process-sheet). */
+const scrollTimelines = () => typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()");
 
 /** A point on the line. It fills in as the line reaches it. */
 function Marker({ at, progress }: { at: number; progress: MotionValue<number> }) {
@@ -58,18 +62,21 @@ export function Process() {
   const wideProgress = reduced ? full : wideScroll;
   const narrowProgress = reduced ? full : narrowScroll;
 
-  // The sheet of paper arrives a little small and grows to full width as it comes up.
+  // The sheet of paper arrives a little small and grows to full width as it comes up. Where
+  // the browser can do that itself, from the scroll position, the stylesheet does it (see
+  // .process-sheet in globals.css) and the graphics card runs it. Elsewhere it is done here.
   const { scrollYProgress: arrival } = useScroll({ target: section, offset: ["start end", "start 0.25"] });
   const grow = useTransform(arrival, [0, 1], [0.9, 1]);
+  const byBrowser = useSyncExternalStore(noop, scrollTimelines, () => false);
 
   return (
     <section ref={section} id="process" aria-labelledby="process-title" className="px-2 md:px-4">
       <motion.div
         // (Marked as a reveal so that, without scripts, it is simply shown at full size.)
         data-reveal=""
-        className="relative origin-top overflow-hidden rounded-[2rem] bg-paper text-ink md:rounded-[3rem]"
+        className="process-sheet relative origin-top overflow-hidden rounded-[2rem] bg-paper text-ink md:rounded-[3rem]"
         // (Given a size either way: dropping the style would leave the server's starting size behind.)
-        style={{ scale: reduced ? 1 : grow }}
+        style={{ scale: reduced || byBrowser ? 1 : grow }}
       >
         <div className="shell relative py-24 md:py-36">
           <SectionHeading

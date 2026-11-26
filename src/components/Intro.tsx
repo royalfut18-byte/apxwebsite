@@ -1,12 +1,14 @@
 "use client";
 
-import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "framer-motion";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 import { cn, ease } from "@/lib/cn";
+import { noteLogoLaunch } from "@/lib/logoFlight";
 import { currentMotion } from "@/lib/motion";
 
 import { Logo, Mark } from "./Logo";
+import { IntroCounter, type IntroCounterHandle } from "./IntroCounter";
 import { LogoAssemble } from "./LogoAssemble";
 import { useIntro } from "./providers/IntroProvider";
 
@@ -17,8 +19,7 @@ import { useIntro } from "./providers/IntroProvider";
  * climbs. Then the wordmark arrives as four solid letters that swing in and lock together,
  * the tip of the A catches light, and a band of colour runs through them (LogoAssemble.tsx).
  * Two curtains lift: ink first, with a band of colour behind it. The wordmark does not fade
- * out. It flies up into the header and becomes the logo (it shares a `layoutId` with the
- * one in <Nav />).
+ * out. It flies up into the header and becomes the logo (see lib/logoFlight.ts).
  *
  * Four things keep it dependable, slow phones and old laptops included:
  *
@@ -93,9 +94,11 @@ export function Intro() {
   const { phase, skipped, reduced, setPhase, prime } = useIntro();
   // -1 before the scripts take over, then one step per word, then the wordmark.
   const [step, setStep] = useState(-1);
-  const count = useMotionValue(0);
-  const digits = useTransform(count, (v) => String(Math.round(v)).padStart(3, "0"));
-  const bar = useTransform(count, (v) => `scaleX(${v / 100})`);
+  const counter = useRef<IntroCounterHandle>(null);
+  // The progress hairline is one animation handed to the browser, timed exactly like the
+  // counter, rather than being redrawn from the counter on every frame.
+  const bar = useRef<HTMLDivElement>(null);
+  const mark = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (phase !== "intro") return;
@@ -104,7 +107,8 @@ export function Intro() {
     document.documentElement.classList.add("intro-live");
 
     let cancelled = false;
-    let counter: ReturnType<typeof animate> | undefined;
+    let line: Animation | undefined;
+    const count = counter.current;
     const timers: number[] = [];
     const wait = (ms: number) => new Promise<void>((done) => timers.push(window.setTimeout(done, ms)));
     const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
@@ -120,7 +124,12 @@ export function Intro() {
       // (Asked directly: this runs once, before React has been told the answer.)
       const logo = LOGO_MS[currentMotion()] + HOLD_MS;
       const total = WORDS.length * WORD_MS + logo;
-      counter = animate(count, 100, { duration: total / 1000, ease: ease.inOut });
+      count?.start(total);
+      line = bar.current?.animate?.([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+        duration: total,
+        easing: `cubic-bezier(${ease.inOut.join(", ")})`,
+        fill: "forwards",
+      });
 
       for (let i = 0; i < WORDS.length; i++) {
         setStep(i);
@@ -135,13 +144,17 @@ export function Intro() {
       await wait(logo);
       await frame();
       if (cancelled) return;
+      // Where the wordmark stands, for its flight up into the header (none when the
+      // animations are turned down: it simply appears there).
+      noteLogoLaunch(currentMotion() === "full" ? (mark.current?.getBoundingClientRect() ?? null) : null);
       setPhase("reveal");
     })();
 
     return () => {
       cancelled = true;
       timers.forEach((t) => window.clearTimeout(t));
-      counter?.stop();
+      count?.stop();
+      line?.cancel();
     };
     // Runs once: the sequence is fixed from the moment the page loads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,16 +227,18 @@ export function Intro() {
                       <span className="pulse-dot block h-1.5 w-1.5 rounded-full bg-ember" />
                       APXS <span className="text-faint">/</span> Web studio
                     </p>
-                    <motion.span className="font-mono text-[clamp(1.5rem,3.2vw,2.5rem)] font-medium leading-none tabular-nums tracking-tight text-bone">
-                      {digits}
-                    </motion.span>
+                    <IntroCounter
+                      ref={counter}
+                      className="flex font-mono text-[clamp(1.5rem,3.2vw,2.5rem)] font-medium leading-none tabular-nums tracking-tight text-bone"
+                    />
                   </div>
                   <div className="relative mt-5 h-px w-full bg-white/10">
                     {/* Creeps along under CSS alone, so the screen is never still. */}
                     <div className="intro-creep absolute inset-0 origin-left bg-white/25" />
-                    <motion.div
+                    <div
+                      ref={bar}
                       className="absolute inset-0 origin-left bg-ember"
-                      style={{ transform: bar }}
+                      style={{ transform: "scaleX(0)" }}
                     />
                   </div>
                 </div>
@@ -237,13 +252,13 @@ export function Intro() {
       {showLogo && (
         <div className="intro-root pointer-events-none fixed inset-0 z-[65] grid place-items-center">
           {reduced ? (
-            <motion.div layoutId="apx-logo" className="w-[clamp(13rem,34vw,28rem)] text-bone">
+            <div ref={mark} className="w-[clamp(13rem,34vw,28rem)] text-bone">
               <Logo draw className="block h-auto w-full" />
-            </motion.div>
+            </div>
           ) : (
-            <motion.div layoutId="apx-logo" className="logo-3d text-bone" role="img" aria-label="APXS">
+            <div ref={mark} className="logo-3d text-bone" role="img" aria-label="APXS">
               <LogoAssemble />
-            </motion.div>
+            </div>
           )}
         </div>
       )}

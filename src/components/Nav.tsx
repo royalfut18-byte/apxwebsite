@@ -2,9 +2,10 @@
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ease } from "@/lib/cn";
+import { clearLogoLaunch, logoLaunch } from "@/lib/logoFlight";
 import { nav, site } from "@/lib/site";
 
 import { Logo } from "./Logo";
@@ -89,6 +90,28 @@ export function Nav() {
 
   const showLogo = phase !== "intro";
 
+  // The intro's wordmark becomes this logo: it starts where the wordmark stood and glides
+  // into place (see lib/logoFlight.ts). Worked out once, then run by the browser.
+  const logo = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = logo.current;
+    const from = logoLaunch();
+    if (!showLogo || !el || !from || typeof el.animate !== "function") return;
+    const to = el.getBoundingClientRect();
+    if (!to.width || !to.height || !from.width || !from.height) return clearLogoLaunch();
+    const flight = el.animate(
+      [
+        {
+          transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`,
+        },
+        { transform: "translate(0px, 0px) scale(1, 1)" },
+      ],
+      { duration: 1050, easing: `cubic-bezier(${ease.swift.join(", ")})` },
+    );
+    flight.onfinish = clearLogoLaunch;
+    return () => flight.cancel();
+  }, [showLogo]);
+
   return (
     <>
       <motion.header
@@ -112,13 +135,9 @@ export function Nav() {
             onClick={() => setOpen(false)}
           >
             {showLogo && (
-              <motion.div
-                layoutId="apx-logo"
-                className="absolute inset-0"
-                transition={{ layout: { duration: 1.05, ease: ease.swift } }}
-              >
+              <div ref={logo} className="absolute inset-0 origin-top-left">
                 <Logo className="block h-full w-full" />
-              </motion.div>
+              </div>
             )}
             {/* The logo normally arrives from the intro. Without scripts there is no intro, so show it outright. */}
             <noscript>
