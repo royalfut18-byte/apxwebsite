@@ -82,7 +82,6 @@ async function sendEmail(enquiry: Enquiry) {
       body: JSON.stringify({
         from,
         to: [to],
-        reply_to: enquiry.email,
         subject: enquirySubject(enquiry),
         text: enquiryText(enquiry),
       }),

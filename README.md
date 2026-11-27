@@ -66,7 +66,8 @@ structured data.
 
 ## Contact form
 
-The form posts to `src/app/api/contact/route.ts`.
+The form posts to `src/app/api/contact/route.ts`. It asks for a phone number rather than an
+email (as does the booking form on /book): the call back is how we reply.
 
 - **Out of the box** it needs no setup. With nothing configured, the form opens the
   visitor's own mail app with their message filled in and addressed to the email in
@@ -95,7 +96,7 @@ settings must match the one in the APECS project's settings (APECS's SETUP.md, p
 lead then appears in APECS under Leads to contact, with a notification.
 
 **What the webhook receives.** Discord and Slack channel webhooks and Google Chat spaces get
-a readable message (name, email, business, what they need, and their message). Any other
+a readable message (name, phone number, business, what they need, and their message). Any other
 address gets the lead as JSON:
 
 ```json
@@ -104,12 +105,12 @@ address gets the lead as JSON:
   "source": "apxs.com.au",
   "submittedAt": "2026-11-26T07:32:04.009Z",
   "name": "Jordan Smith",
-  "email": "jordan@example.com",
+  "phone": "0412 345 678",
   "business": "Jordan Plumbing",
   "needs": ["Website", "SEO"],
   "message": "We need a site that gets us more calls.",
   "subject": "New enquiry from Jordan Plumbing",
-  "text": "Name: Jordan Smith\nEmail: …"
+  "text": "Name: Jordan Smith\nPhone: …"
 }
 ```
 
@@ -121,7 +122,7 @@ honeypot field filters out basic bots, which are never forwarded.
 ## Booking a call (/book)
 
 `apxs.com.au/book` goes straight to booking a free 10-minute call, with no intro: pick a day,
-pick a time, give a name, phone number and email, done. It is a link to share on its own
+pick a time, give a name and phone number, done. It is a link to share on its own
 (an Instagram bio, an email signature, a message). "See the main site" on it is a full page
 load, so the home page plays its intro as usual.
 
@@ -129,7 +130,7 @@ load, so the home page plays its intro as usual.
   every 15 minutes, at least an hour ahead, up to two weeks out, and never over anything
   already in its Calendar. Visitors see them in their own time zone (with Sydney's alongside).
 - **Each booking lands in APECS's Calendar** as "Call: name (business)", with their phone
-  number, email and what they want to talk about, and both of you get a notification. The
+  number and what they want to talk about, and both of you get a notification. The
   visitor gets links to put the call in Google Calendar or Apple / Outlook.
 - **Nothing to set up for APXS**: when `LEADS_WEBHOOK_URL` is APECS's website-leads address
   (`…/api/leads/website`), bookings go to the address next to it (`…/api/calls/website`) with

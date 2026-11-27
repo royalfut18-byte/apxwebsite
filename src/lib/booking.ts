@@ -4,19 +4,21 @@
  * Sydney time, an hour's notice at least, up to two weeks ahead.
  */
 
+import { isPhone } from "./contact";
+
 /** How long a call is, in minutes. */
 export const CALL_MINUTES = 10;
 
 /** Where we are: the times are worked out in Sydney time and shown in the visitor's own. */
 export const HOME_ZONE = "Australia/Sydney";
 
-export const BOOKING_LIMITS = { name: 120, email: 200, phone: 40, business: 160, message: 1000 } as const;
+export const BOOKING_LIMITS = { name: 120, phone: 25, business: 160, message: 1000 } as const;
 
 export type Booking = {
   /** When the call starts, as an ISO date. */
   start: string;
   name: string;
-  email: string;
+  /** The only way we ask to reach them: no email. */
   phone: string;
   business: string;
   message: string;
@@ -24,10 +26,7 @@ export type Booking = {
   timeZone: string;
 };
 
-export type BookingErrors = Partial<Record<"start" | "name" | "email" | "phone", string>>;
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE = /^[0-9+()\-.\s]+$/;
+export type BookingErrors = Partial<Record<"start" | "name" | "phone", string>>;
 
 /** Trims and bounds whatever came in, so the same rules apply in the browser and on the server. */
 export function cleanBooking(input: unknown): Booking {
@@ -37,7 +36,6 @@ export function cleanBooking(input: unknown): Booking {
   return {
     start: Number.isFinite(at) ? new Date(at).toISOString() : "",
     name: text(raw.name, BOOKING_LIMITS.name),
-    email: text(raw.email, BOOKING_LIMITS.email),
     phone: text(raw.phone, BOOKING_LIMITS.phone),
     business: text(raw.business, BOOKING_LIMITS.business),
     message: text(raw.message, BOOKING_LIMITS.message),
@@ -50,10 +48,7 @@ export function validateBooking(booking: Booking): BookingErrors {
   if (!booking.start) errors.start = "Pick a time first.";
   if (!booking.name) errors.name = "Tell us your name.";
   if (!booking.phone) errors.phone = "We need a number to call you on.";
-  else if (!PHONE.test(booking.phone) || booking.phone.replace(/\D/g, "").length < 8)
-    errors.phone = "That number doesn't look right.";
-  if (!booking.email) errors.email = "We need an email, in case we miss you.";
-  else if (!EMAIL.test(booking.email)) errors.email = "That email doesn't look right.";
+  else if (!isPhone(booking.phone)) errors.phone = "That number doesn't look right.";
   return errors;
 }
 

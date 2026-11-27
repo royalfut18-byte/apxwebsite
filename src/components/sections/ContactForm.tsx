@@ -21,7 +21,7 @@ import { Reveal } from "../ui/Reveal";
 
 type Status = "idle" | "sending" | "sent" | "mailto" | "error";
 
-const EMPTY: Enquiry = { name: "", email: "", business: "", needs: [], message: "" };
+const EMPTY: Enquiry = { name: "", phone: "", business: "", needs: [], message: "" };
 
 function mailtoFor(enquiry: Enquiry) {
   return `mailto:${site.email}?subject=${encodeURIComponent(enquirySubject(enquiry))}&body=${encodeURIComponent(enquiryText(enquiry))}`;
@@ -29,12 +29,14 @@ function mailtoFor(enquiry: Enquiry) {
 
 type FieldProps = {
   label: string;
-  name: keyof Pick<Enquiry, "name" | "email" | "business" | "message">;
+  name: keyof Pick<Enquiry, "name" | "phone" | "business" | "message">;
   value: string;
   onChange: (value: string) => void;
   error?: string;
   optional?: boolean;
   type?: string;
+  /** Which keyboard a phone shows, e.g. the number pad for "tel". */
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   autoComplete?: string;
   maxLength: number;
   multiline?: boolean;
@@ -49,6 +51,7 @@ function Field({
   error,
   optional,
   type = "text",
+  inputMode,
   autoComplete,
   maxLength,
   multiline,
@@ -86,7 +89,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
         />
       ) : (
-        <input {...shared} type={type} onChange={(e) => onChange(e.target.value)} />
+        <input {...shared} type={type} inputMode={inputMode} onChange={(e) => onChange(e.target.value)} />
       )}
       <AnimatePresence>
         {error ? (
@@ -134,7 +137,7 @@ export function ContactForm() {
     setErrors(found);
     if (Object.keys(found).length > 0) {
       // Send focus to the first problem.
-      const first = (["name", "email", "message"] as const).find((k) => found[k]);
+      const first = (["name", "phone", "message"] as const).find((k) => found[k]);
       if (first) event.currentTarget.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
       return;
     }
@@ -250,8 +253,8 @@ export function ContactForm() {
                   Got it{firstName ? `, ${firstName}` : ""}.
                 </h3>
                 <p className="mt-4 max-w-md text-lg leading-relaxed text-bone-dim">
-                  Your message is on its way to us. We&rsquo;ll read it properly and come back to you at{" "}
-                  <span className="text-bone">{enquiry.email}</span>.
+                  Your message is on its way to us. We&rsquo;ll read it properly and call you back on{" "}
+                  <span className="text-bone">{enquiry.phone}</span>.
                 </p>
               </>
             ) : status === "mailto" ? (
@@ -336,15 +339,16 @@ export function ContactForm() {
                 placeholder="Alex Citizen"
               />
               <Field
-                label="Email"
-                name="email"
-                type="email"
-                value={enquiry.email}
-                onChange={(v) => set("email", v)}
-                error={errors.email}
-                autoComplete="email"
-                maxLength={LIMITS.email}
-                placeholder="alex@yourbusiness.com.au"
+                label="Phone"
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                value={enquiry.phone}
+                onChange={(v) => set("phone", v)}
+                error={errors.phone}
+                autoComplete="tel"
+                maxLength={LIMITS.phone}
+                placeholder="04xx xxx xxx"
               />
             </Reveal>
 

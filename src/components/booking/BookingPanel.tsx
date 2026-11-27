@@ -29,10 +29,10 @@ import { site } from "@/lib/site";
 
 import { Magnetic } from "../ui/Magnetic";
 
-type Details = Pick<Booking, "name" | "phone" | "email" | "business" | "message">;
+type Details = Pick<Booking, "name" | "phone" | "business" | "message">;
 type Status = "idle" | "sending" | "booked" | "error";
 
-const EMPTY: Details = { name: "", phone: "", email: "", business: "", message: "" };
+const EMPTY: Details = { name: "", phone: "", business: "", message: "" };
 /** Times loaded longer ago than this are fetched again when the visitor comes back to the tab. */
 const STALE_MS = 5 * 60_000;
 
@@ -290,7 +290,7 @@ export function BookingPanel() {
         timesRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
         return;
       }
-      const first = (["name", "phone", "email"] as const).find((k) => found[k]);
+      const first = (["name", "phone"] as const).find((k) => found[k]);
       if (first) event.currentTarget.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
       return;
     }
@@ -348,7 +348,6 @@ export function BookingPanel() {
     const add = (label: string, value: string) => value.trim() && lines.push(`${label}: ${value.trim()}`);
     add("Name", details.name);
     add("Phone", details.phone);
-    add("Email", details.email);
     add("Business", details.business);
     if (details.message.trim()) lines.push("", details.message.trim());
     return lines.join("\n");
@@ -675,17 +674,6 @@ export function BookingPanel() {
             autoComplete="tel"
             maxLength={BOOKING_LIMITS.phone}
             placeholder="04xx xxx xxx"
-          />
-          <Field
-            label="Email"
-            name="email"
-            type="email"
-            value={details.email}
-            onChange={(v) => set("email", v)}
-            error={errors.email}
-            autoComplete="email"
-            maxLength={BOOKING_LIMITS.email}
-            placeholder="alex@yourbusiness.com.au"
           />
           <Field
             label="Business"

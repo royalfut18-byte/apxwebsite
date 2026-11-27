@@ -3,19 +3,23 @@
 export const NEEDS = ["Website", "SEO", "Instagram", "Custom tool", "Not sure yet"] as const;
 export type Need = (typeof NEEDS)[number];
 
-export const LIMITS = { name: 120, email: 200, business: 160, message: 4000 } as const;
+/** 25 characters is room for any phone number, "+61 (0)412 345 678" included (APECS takes no more). */
+export const LIMITS = { name: 120, phone: 25, business: 160, message: 4000 } as const;
 
 export type Enquiry = {
   name: string;
-  email: string;
+  /** How we get back to them: the form asks for a phone number, not an email. */
+  phone: string;
   business: string;
   needs: string[];
   message: string;
 };
 
-export type EnquiryErrors = Partial<Record<"name" | "email" | "message", string>>;
+export type EnquiryErrors = Partial<Record<"name" | "phone" | "message", string>>;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** A phone number: digits, spaces, + ( ) - and dots, with at least eight digits. Shared with the booking form. */
+export const isPhone = (value: string) =>
+  /^[0-9+()\-.\s]+$/.test(value) && value.replace(/\D/g, "").length >= 8;
 
 /** Trims and bounds whatever came in, so the same rules apply in the browser and on the server. */
 export function cleanEnquiry(input: unknown): Enquiry {
@@ -26,7 +30,7 @@ export function cleanEnquiry(input: unknown): Enquiry {
     : [];
   return {
     name: text(raw.name, LIMITS.name),
-    email: text(raw.email, LIMITS.email),
+    phone: text(raw.phone, LIMITS.phone),
     business: text(raw.business, LIMITS.business),
     needs: [...new Set(needs)],
     message: text(raw.message, LIMITS.message),
@@ -36,8 +40,8 @@ export function cleanEnquiry(input: unknown): Enquiry {
 export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
   const errors: EnquiryErrors = {};
   if (!enquiry.name) errors.name = "Tell us your name.";
-  if (!enquiry.email) errors.email = "We need an email to reply to.";
-  else if (!EMAIL.test(enquiry.email)) errors.email = "That email doesn't look right.";
+  if (!enquiry.phone) errors.phone = "We need a number to call you back on.";
+  else if (!isPhone(enquiry.phone)) errors.phone = "That number doesn't look right.";
   if (!enquiry.message) errors.message = "A line or two about what you need.";
   return errors;
 }
@@ -46,7 +50,7 @@ export function validateEnquiry(enquiry: Enquiry): EnquiryErrors {
 export function enquiryText(enquiry: Enquiry) {
   return [
     `Name: ${enquiry.name}`,
-    `Email: ${enquiry.email}`,
+    `Phone: ${enquiry.phone}`,
     enquiry.business ? `Business: ${enquiry.business}` : null,
     enquiry.needs.length ? `Interested in: ${enquiry.needs.join(", ")}` : null,
     "",

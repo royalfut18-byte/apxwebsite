@@ -52,7 +52,7 @@ export function leadBody(lead: Lead, format: LeadFormat): unknown {
   if (format === "discord") {
     const fields = [
       { name: "Name", value: clip(lead.name, 1024), inline: true },
-      { name: "Email", value: clip(lead.email, 1024), inline: true },
+      { name: "Phone", value: clip(lead.phone, 1024), inline: true },
       ...(lead.business ? [{ name: "Business", value: clip(lead.business, 1024), inline: true }] : []),
       ...(lead.needs.length ? [{ name: "Interested in", value: clip(lead.needs.join(", "), 1024) }] : []),
     ];
@@ -86,7 +86,7 @@ export function leadBody(lead: Lead, format: LeadFormat): unknown {
     source: lead.source,
     submittedAt: lead.submittedAt,
     name: lead.name,
-    email: lead.email,
+    phone: lead.phone,
     business: lead.business,
     needs: lead.needs,
     message: lead.message,
