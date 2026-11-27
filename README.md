@@ -128,8 +128,8 @@ load, so the home page plays its intro as usual. The home page leads there too: 
 main button ("Book a free call"), the top bar on wide screens, the phone menu, the contact
 section and the footer (all through `bookHref` in `src/lib/site.ts`).
 
-- **The times come from APECS**, which keeps the calendar: weekdays from 9 am to a last call at 9:30 pm Sydney time,
-  every 15 minutes, at least an hour ahead, up to two weeks out, and never over anything
+- **The times come from APECS**, which keeps the calendar: every day (weekends too) from 9 am to a last call at 9:30 pm Sydney time,
+  every 15 minutes, at least an hour ahead, up to about six months out, and never over anything
   already in its Calendar. Visitors see them in their own time zone (with Sydney's alongside).
 - **Each booking lands in APECS's Calendar** as "Call: name (business)", with their phone
   number and what they want to talk about, and both of you get a notification. The

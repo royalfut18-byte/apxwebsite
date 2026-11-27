@@ -1,7 +1,7 @@
 /**
  * Shared between the booking page (/book) and the endpoints it posts to. The free times
- * themselves come from APECS, which keeps the calendar (see lib/calls.ts): weekdays from 9 am to
- * a last call at 9:30 pm Sydney time, an hour's notice at least, up to two weeks ahead.
+ * themselves come from APECS, which keeps the calendar (see lib/calls.ts): every day from 9 am to a
+ * last call at 9:30 pm Sydney time, an hour's notice at least, up to about six months ahead.
  */
 
 import { isPhone } from "./contact";
@@ -81,13 +81,24 @@ export function visitorZone() {
   return HOME_ZONE;
 }
 
-/** "2026-12-02": the date a moment falls on in a time zone. */
+const keyFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** "2026-12-02": the date a moment falls on in a time zone. (Called for every free time, so kept quick.) */
 export function dayKey(iso: string, zone: string) {
-  const p = Object.fromEntries(
-    format(zone, { year: "numeric", month: "2-digit", day: "2-digit" })
-      .formatToParts(new Date(iso))
-      .map((x) => [x.type, x.value]),
-  );
+  let f = keyFormats.get(zone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-CA", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    keyFormats.set(zone, f);
+  }
+  const quick = f.format(new Date(iso));
+  if (/^\d{4}-\d{2}-\d{2}$/.test(quick)) return quick;
+  // Older browsers may write Canadian dates another way: then take the date apart instead.
+  const p = Object.fromEntries(f.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}`;
 }
 

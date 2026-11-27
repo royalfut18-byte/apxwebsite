@@ -671,7 +671,7 @@ export function BookingPanel() {
             {status === "error"
               ? "It's us, not you. Everything you typed is still here: try again, or email us the time and we'll lock it in."
               : empty
-                ? "Every time in the next two weeks is taken. Email us a few times that suit you and we'll make one work."
+                ? "Every time we have is taken. Email us a few times that suit you and we'll make one work."
                 : "Online booking isn't working just now. Email us a couple of times that suit you and we'll lock one in."}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
