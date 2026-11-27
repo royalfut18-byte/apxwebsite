@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
 
 import { ease } from "@/lib/cn";
-import { site } from "@/lib/site";
+import { bookHref, site } from "@/lib/site";
 
 import { Aurora } from "../Aurora";
 import { useIntro } from "../providers/IntroProvider";
@@ -101,8 +101,8 @@ export function Hero() {
               className="mt-7 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 md:mt-[clamp(1.25rem,3.2svh,2.25rem)]"
             >
               <Magnetic strength={0.2}>
-                <Button href="#contact" size="compact">
-                  Start a project
+                <Button href={bookHref} size="compact">
+                  Book a free call
                 </Button>
               </Magnetic>
               <Magnetic strength={0.2}>

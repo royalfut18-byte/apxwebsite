@@ -6,8 +6,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ease } from "@/lib/cn";
 import { clearLogoLaunch, logoLaunch } from "@/lib/logoFlight";
-import { nav, site } from "@/lib/site";
+import { bookHref, nav, site } from "@/lib/site";
 
+import { CalendarIcon } from "./booking/icons";
 import { Logo } from "./Logo";
 import { useIntro } from "./providers/IntroProvider";
 import { Magnetic } from "./ui/Magnetic";
@@ -187,6 +188,14 @@ export function Nav() {
             animate={ready ? WIPE_SHOWN : WIPE_HIDDEN}
             transition={{ duration: 0.7, ease: ease.expo, delay: ready ? 0.8 : 0 }}
           >
+            {/* On wide screens there's room for both: book a call, or start a project. */}
+            <a
+              href={bookHref}
+              className="hidden h-11 items-center gap-2 whitespace-nowrap rounded-full border border-white/15 px-5 text-[0.9375rem] font-semibold text-bone transition-colors duration-300 hover:border-white/40 hover:bg-white/[0.06] lg:inline-flex"
+            >
+              <CalendarIcon className="h-4 w-4 text-ember" />
+              Book a call
+            </a>
             <Magnetic className="hidden md:block" strength={0.25}>
               <a
                 href={to("#contact")}
@@ -266,6 +275,16 @@ export function Nav() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease: ease.expo, delay: 0.5 }}
             >
+              <a
+                href={bookHref}
+                onClick={() => setOpen(false)}
+                className="mb-9 flex h-14 items-center justify-between rounded-full bg-ember pl-6 pr-2 text-lg font-semibold text-ink"
+              >
+                Book a free call
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-bone">
+                  <CalendarIcon className="h-4 w-4" />
+                </span>
+              </a>
               <p className="label mb-3 text-mute">Say hello</p>
               <a
                 href={`mailto:${site.email}`}

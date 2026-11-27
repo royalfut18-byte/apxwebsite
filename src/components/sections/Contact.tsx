@@ -3,7 +3,7 @@
 import { useInView } from "framer-motion";
 import { useRef } from "react";
 
-import { site } from "@/lib/site";
+import { bookHref, site } from "@/lib/site";
 
 import { Aurora } from "../Aurora";
 import { Reveal } from "../ui/Reveal";
@@ -70,6 +70,15 @@ export function Contact() {
                   className="link-sweep mt-2 inline-block pb-1 text-xl font-medium text-bone"
                 >
                   {site.email}
+                </a>
+              </div>
+              <div>
+                <p className="label text-mute">Rather talk?</p>
+                <a
+                  href={bookHref}
+                  className="link-sweep mt-2 inline-block pb-1 text-xl font-medium text-bone"
+                >
+                  Book a 10-minute call
                 </a>
               </div>
               {site.phone ? (

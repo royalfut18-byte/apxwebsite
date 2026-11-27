@@ -7,7 +7,7 @@ import { useIsClient } from "@/hooks/useIsClient";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/cn";
 import { chooseMotion } from "@/lib/motion";
-import { nav, site } from "@/lib/site";
+import { bookHref, nav, site } from "@/lib/site";
 
 import { Logo } from "../Logo";
 import { scrollToTarget } from "@/lib/scroll";
@@ -58,6 +58,14 @@ export function Footer() {
           <div className="md:col-span-2">
             <p className="label mb-5 text-mute">Say hello</p>
             <ul className="grid gap-2.5">
+              <li>
+                <a
+                  href={bookHref}
+                  className="link-sweep pb-0.5 text-lg font-medium text-bone-dim hover:text-bone"
+                >
+                  Book a call
+                </a>
+              </li>
               <li>
                 <a
                   href={`mailto:${site.email}`}

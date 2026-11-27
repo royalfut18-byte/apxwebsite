@@ -37,6 +37,9 @@ export const site: SiteConfig = {
   shortDescription: "Websites, SEO, Instagram and custom tools for Australian businesses.",
 };
 
+/** The booking page: a free 10-minute call (see app/book). Linked from the hero, header, contact and footer. */
+export const bookHref = "/book";
+
 export const nav = [
   { label: "Work", href: "#work" },
   { label: "Services", href: "#services" },

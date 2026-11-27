@@ -124,7 +124,9 @@ honeypot field filters out basic bots, which are never forwarded.
 `apxs.com.au/book` goes straight to booking a free 10-minute call, with no intro: pick a day,
 pick a time, give a name and phone number, done. It is a link to share on its own
 (an Instagram bio, an email signature, a message). "See the main site" on it is a full page
-load, so the home page plays its intro as usual.
+load, so the home page plays its intro as usual. The home page leads there too: the hero's
+main button ("Book a free call"), the top bar on wide screens, the phone menu, the contact
+section and the footer (all through `bookHref` in `src/lib/site.ts`).
 
 - **The times come from APECS**, which keeps the calendar: weekdays 9 am to 5 pm Sydney time,
   every 15 minutes, at least an hour ahead, up to two weeks out, and never over anything
