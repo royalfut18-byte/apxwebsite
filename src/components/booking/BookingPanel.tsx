@@ -51,7 +51,8 @@ const noop = () => () => {};
 /** The free times from APECS (through this site's own server), or null when booking is unavailable. */
 async function getFreeTimes(): Promise<string[] | null> {
   try {
-    const response = await fetch("/api/book/slots", { cache: "no-store" });
+    // A plain request, so the first one picks up the copy the page asked for in advance (app/book/page.tsx).
+    const response = await fetch("/api/book/slots");
     const data = (await response.json().catch(() => ({}))) as { slots?: unknown };
     if (!response.ok || !Array.isArray(data.slots)) return null;
     return data.slots.filter((s): s is string => typeof s === "string");
@@ -378,13 +379,18 @@ export function BookingPanel() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const lastStep = useRef(step);
 
+  /** Times someone else took while this visitor was booking: kept out even if a slightly old copy still has them. */
+  const gone = useRef(new Set<string>());
+
   const apply = useCallback((free: string[] | null) => {
     if (!free) {
       setLoad("unavailable");
       return;
     }
+    // The list may be a copy kept for a while (see api/book/slots): drop times that are now too soon.
+    const soonest = Date.now() + 55 * 60_000;
     setLoadedAt(Date.now());
-    setSlots(free);
+    setSlots(free.filter((s) => Date.parse(s) >= soonest && !gone.current.has(s)));
     setLoad("ready");
   }, []);
 
@@ -516,6 +522,8 @@ export function BookingPanel() {
       }
       if (response.status === 409) {
         // Someone got there first. Back to the times that are still free; what they typed is kept.
+        gone.current.add(booking.start);
+        setSlots((prev) => prev.filter((s) => s !== booking.start));
         setStatus("idle");
         setTime(null);
         setTaken(true);

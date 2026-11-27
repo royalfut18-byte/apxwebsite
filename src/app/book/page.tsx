@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preload } from "react-dom";
 
 import { Aurora } from "@/components/Aurora";
 import { BookingPanel } from "@/components/booking/BookingPanel";
@@ -23,6 +24,9 @@ export const metadata: Metadata = {
  * "See the main site" is a full page load, so the home page plays its intro as usual.
  */
 export default function BookPage() {
+  // Ask for the free times straight away, while the page's code is still on its way.
+  preload("/api/book/slots", { as: "fetch", crossOrigin: "anonymous" });
+
   return (
     <main id="main" className="relative min-h-[100svh] overflow-hidden">
       {/* The site's light, behind the heading. */}
