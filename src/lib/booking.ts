@@ -1,7 +1,7 @@
 /**
  * Shared between the booking page (/book) and the endpoints it posts to. The free times
- * themselves come from APECS, which keeps the calendar (see lib/calls.ts): weekdays, 9 to 5
- * Sydney time, an hour's notice at least, up to two weeks ahead.
+ * themselves come from APECS, which keeps the calendar (see lib/calls.ts): weekdays from 9 am to
+ * a last call at 9:30 pm Sydney time, an hour's notice at least, up to two weeks ahead.
  */
 
 import { isPhone } from "./contact";

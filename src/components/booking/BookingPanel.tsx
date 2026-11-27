@@ -17,6 +17,7 @@ import {
   endClock,
   googleCalendarLink,
   groupByDay,
+  hourOf,
   icsFile,
   longDay,
   monthOf,
@@ -411,6 +412,23 @@ export function BookingPanel() {
   // A time that has gone (booked by someone else) is no longer chosen.
   const chosen = time && slots.includes(time) ? time : null;
   const lost = Boolean(time) && !chosen && load === "ready";
+  const timeGroups = useMemo(() => {
+    if (!current || !zone) return [];
+    const parts = [
+      { label: "Morning", times: current.times.filter((t) => hourOf(t, zone) < 12) },
+      {
+        label: "Afternoon",
+        times: current.times.filter((t) => hourOf(t, zone) >= 12 && hourOf(t, zone) < 17),
+      },
+      { label: "Evening", times: current.times.filter((t) => hourOf(t, zone) >= 17) },
+    ].filter((g) => g.times.length > 0);
+    let from = 0;
+    return parts.map((g) => {
+      const group = { ...g, from };
+      from += g.times.length;
+      return group;
+    });
+  }, [current, zone]);
   const first = days.length ? monthOf(days[0].key) : "";
   const last = days.length ? monthOf(days[days.length - 1].key) : "";
   const wanted = month ?? (current ? monthOf(current.key) : first);
@@ -769,49 +787,63 @@ export function BookingPanel() {
                             </p>
                           ) : null}
                         </div>
-                        <ul
+                        {/* Morning, afternoon and evening (in the visitor's own clock), so a long day is easy to scan. */}
+                        <div
                           key={current.key}
                           data-testid="times"
-                          aria-label={`Free times on ${longDay(current.times[0], zone)}`}
-                          className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-4 md:-mx-1 md:max-h-[27rem] md:grid-cols-1 md:overflow-y-auto md:px-1 md:py-2 md:[mask-image:linear-gradient(to_bottom,transparent,#000_0.6rem,#000_calc(100%-1.5rem),transparent)]"
+                          className="mt-6 md:-mx-1 md:max-h-[27rem] md:overflow-y-auto md:px-1 md:pb-3 md:pt-1 md:[mask-image:linear-gradient(to_bottom,transparent,#000_0.6rem,#000_calc(100%-1.5rem),transparent)]"
                         >
-                          {current.times.map((t, i) => {
-                            const on = t === chosen;
-                            return (
-                              <motion.li
-                                key={t}
-                                className="flex"
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, ease: ease.expo, delay: Math.min(i, 14) * 0.02 }}
+                          {timeGroups.map((g, gi) => (
+                            <div key={g.label} className={cn(gi > 0 && "mt-7")}>
+                              <p className="label mb-3 text-faint">{g.label}</p>
+                              <ul
+                                aria-label={`${g.label} times on ${longDay(current.times[0], zone)}`}
+                                className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-1"
                               >
-                                <button
-                                  type="button"
-                                  data-time={t}
-                                  aria-pressed={on}
-                                  onClick={() => pickTime(t)}
-                                  className={cn(
-                                    "h-12 min-w-0 flex-1 rounded-full border font-mono text-[0.875rem] tabular-nums transition-[background-color,border-color,color,transform] duration-300 active:scale-95 md:text-[0.9375rem]",
-                                    on
-                                      ? "border-ember bg-ember text-ink md:border-white/25 md:bg-white/[0.08] md:text-bone"
-                                      : "border-white/12 text-bone hover:border-ember hover:text-ember-soft",
-                                  )}
-                                >
-                                  {clock(t, zone)}
-                                </button>
-                                {on ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setStep("details")}
-                                    className="book-next ml-2 hidden h-12 flex-1 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-ember font-semibold text-ink transition-colors duration-300 hover:bg-bone md:flex"
-                                  >
-                                    Next <ArrowIcon dir="right" className="h-4 w-4" />
-                                  </button>
-                                ) : null}
-                              </motion.li>
-                            );
-                          })}
-                        </ul>
+                                {g.times.map((t, i) => {
+                                  const on = t === chosen;
+                                  return (
+                                    <motion.li
+                                      key={t}
+                                      className="flex"
+                                      initial={{ opacity: 0, y: 8 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{
+                                        duration: 0.4,
+                                        ease: ease.expo,
+                                        delay: Math.min(g.from + i, 14) * 0.02,
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        data-time={t}
+                                        aria-pressed={on}
+                                        onClick={() => pickTime(t)}
+                                        className={cn(
+                                          "h-12 min-w-0 flex-1 rounded-full border font-mono text-[0.875rem] tabular-nums transition-[background-color,border-color,color,transform] duration-300 active:scale-95 md:text-[0.9375rem]",
+                                          on
+                                            ? "border-ember bg-ember text-ink md:border-white/25 md:bg-white/[0.08] md:text-bone"
+                                            : "border-white/12 text-bone hover:border-ember hover:text-ember-soft",
+                                        )}
+                                      >
+                                        {clock(t, zone)}
+                                      </button>
+                                      {on ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setStep("details")}
+                                          className="book-next ml-2 hidden h-12 flex-1 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-ember font-semibold text-ink transition-colors duration-300 hover:bg-bone md:flex"
+                                        >
+                                          Next <ArrowIcon dir="right" className="h-4 w-4" />
+                                        </button>
+                                      ) : null}
+                                    </motion.li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
                       </>
                     ) : (
                       <div>
