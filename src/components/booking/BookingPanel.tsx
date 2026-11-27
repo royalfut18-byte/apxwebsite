@@ -351,17 +351,26 @@ function Ticket({ start, zone }: { start: string; zone: string }) {
    The panel
    --------------------------------------------------------------------------- */
 
-export function BookingPanel() {
-  // The visitor's time zone is only known in the browser. Until then (and on the server) the
-  // panel shows its loading state, which doesn't depend on it.
-  const own = useSyncExternalStore(noop, visitorZone, () => null);
+type BookingPanelProps = {
+  /**
+   * The free times the server drew the page with (app/book/page.tsx), so the calendar is on
+   * screen before the page's code has loaded. Null when it had none: the panel then loads them.
+   */
+  initialSlots?: string[] | null;
+};
+
+export function BookingPanel({ initialSlots = null }: BookingPanelProps) {
+  // The visitor's time zone is only known in the browser. The server draws the calendar in
+  // Sydney time (or the loading state, with no list); it switches to the visitor's own clock
+  // straight after.
+  const own = useSyncExternalStore(noop, visitorZone, () => (initialSlots ? HOME_ZONE : null));
   const [picked, setPicked] = useState<string | null>(null);
   const zone = picked ?? own;
   const reduced = useReducedMotion();
   const isClient = useIsClient();
 
-  const [slots, setSlots] = useState<string[]>([]);
-  const [load, setLoad] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [slots, setSlots] = useState<string[]>(() => initialSlots ?? []);
+  const [load, setLoad] = useState<"loading" | "ready" | "unavailable">(initialSlots ? "ready" : "loading");
   const [loadedAt, setLoadedAt] = useState(0);
   const [step, setStep] = useState<"pick" | "details">("pick");
   const [month, setMonth] = useState<string | null>(null);
@@ -384,7 +393,8 @@ export function BookingPanel() {
 
   const apply = useCallback((free: string[] | null) => {
     if (!free) {
-      setLoad("unavailable");
+      // Couldn't refresh: keep showing the list the page came with, if there is one.
+      setLoad((was) => (was === "ready" ? was : "unavailable"));
       return;
     }
     // The list may be a copy kept for a while (see api/book/slots): drop times that are now too soon.
@@ -717,7 +727,12 @@ export function BookingPanel() {
     <>
       {/* It rises in with a CSS animation (globals.css, .book-rise), so it is on screen from the
           first paint rather than after the scripts arrive. */}
-      <div ref={panelRef} className={cn(CARD, "book-rise scroll-mt-28 [animation-delay:240ms]")}>
+      <div
+        ref={panelRef}
+        // Marks that a fresh list has arrived (the page may have been drawn with a kept one).
+        data-fresh={loadedAt ? "" : undefined}
+        className={cn(CARD, "book-rise scroll-mt-28 [animation-delay:240ms]")}
+      >
         {EDGE}
         <div className="relative grid grid-cols-1 lg:grid-cols-[minmax(15rem,0.9fr)_minmax(0,2.4fr)]">
           <aside className="min-w-0 border-b border-white/10 p-6 md:p-10 lg:border-b-0 lg:border-r xl:p-12">
@@ -814,7 +829,8 @@ export function BookingPanel() {
                                     <motion.li
                                       key={t}
                                       className="flex"
-                                      initial={{ opacity: 0, y: 8 }}
+                                      // Drawn on the server: on screen straight away. Later days slide in.
+                                      initial={isClient ? { opacity: 0, y: 8 } : false}
                                       animate={{ opacity: 1, y: 0 }}
                                       transition={{
                                         duration: 0.4,

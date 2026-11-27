@@ -5,9 +5,12 @@ import { Aurora } from "@/components/Aurora";
 import { BookingPanel } from "@/components/booking/BookingPanel";
 import { Button } from "@/components/ui/Button";
 import { CALL_MINUTES } from "@/lib/booking";
+import { freeTimesForPage } from "@/lib/calls";
 import { site } from "@/lib/site";
 
 const title = `Book a ${CALL_MINUTES}-minute call`;
+/** About six weeks of times (51 a day): enough to draw the page with, and a light page to send. */
+const FIRST_TIMES = 2000;
 const description = `Pick a time for a free ${CALL_MINUTES}-minute call with ${site.name} about a website, SEO, Instagram or a custom tool for your business. We ring you.`;
 
 export const metadata: Metadata = {
@@ -23,7 +26,7 @@ export const metadata: Metadata = {
  * come from APECS, and each booking lands in its calendar as a call (see lib/calls.ts).
  * "See the main site" is a full page load, so the home page plays its intro as usual.
  */
-export default function BookPage() {
+export default async function BookPage() {
   // Ask for the free times straight away, while the page's code is still on its way.
   preload("/api/book/slots", { as: "fetch", crossOrigin: "anonymous" });
 
@@ -73,7 +76,8 @@ export default function BookPage() {
           </p>
         </noscript>
 
-        <BookingPanel />
+        {/* Drawn with the first six weeks or so of free times; the rest arrive a moment later. */}
+        <BookingPanel initialSlots={(await freeTimesForPage())?.slots.slice(0, FIRST_TIMES) ?? null} />
 
         <p className="book-rise mt-8 text-[0.9375rem] text-faint [animation-delay:320ms]">
           Rather write?{" "}

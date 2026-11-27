@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+
 import { CALL_MINUTES, HOME_ZONE, type Booking } from "./booking";
 
 /**
@@ -42,13 +44,17 @@ export function bookingApi(env: NodeJS.ProcessEnv = process.env): { url: URL; se
 }
 
 /** The free times, straight from APECS. `null` when booking isn't set up or can't be reached. */
-export async function fetchFreeTimes(env: NodeJS.ProcessEnv = process.env): Promise<FreeTimes | null> {
+export async function fetchFreeTimes(
+  env: NodeJS.ProcessEnv = process.env,
+  { keep = false }: { keep?: boolean } = {},
+): Promise<FreeTimes | null> {
   const api = bookingApi(env);
   if (!api) return null;
   try {
     const response = await fetch(api.url, {
       headers: { Authorization: `Bearer ${api.secret}` },
-      cache: "no-store",
+      // A kept copy (freeTimesForPage) is looked after by Next.js; everything else is fetched fresh.
+      ...(keep ? {} : { cache: "no-store" as const }),
       signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) {
@@ -109,4 +115,17 @@ export async function sendBooking(
     console.error(`Booking: could not reach APECS (${api.url.hostname})`, error);
     return { status: "unavailable" };
   }
+}
+
+/**
+ * The free times the booking page is drawn with (app/book/page.tsx), so it arrives with the
+ * calendar already on it. Next.js keeps this list and refreshes it in the background once a
+ * minute while people visit; after a quiet spell (up to a week) the page is still served at
+ * once with the older list. That's fine: the page asks for a fresh list as soon as it opens,
+ * and hides any time that has become less than an hour away.
+ */
+export async function freeTimesForPage() {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 60, expire: 7 * 24 * 60 * 60 });
+  return fetchFreeTimes(process.env, { keep: true });
 }
