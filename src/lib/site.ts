@@ -22,7 +22,7 @@ export const site: SiteConfig = {
   legalName: "APXS",
   url: "https://apxs.com.au",
   /** Where enquiries go. Used by the contact form and every "email us" link. */
-  email: "hello@apxs.com.au",
+  email: "support@apxs.com.au",
   /** Optional. Leave blank to hide. Use full international format, e.g. "+61 400 000 000". */
   phone: "",
   /** Optional. Just the handle, without the @. Leave blank to hide. */

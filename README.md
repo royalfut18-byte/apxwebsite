@@ -11,7 +11,7 @@ each service, and a portfolio of real client sites (only one of them shown by na
 The site is ready to deploy, but a few details were filled in as placeholders. They all
 live in `src/lib/site.ts`:
 
-- [ ] **`email`**: currently `hello@apxs.com.au`. Every "email us" link and the contact form
+- [ ] **`email`**: currently `support@apxs.com.au`. Every "email us" link and the contact form
       send to this address, so it must be a real inbox.
 - [ ] **`phone`** and **`instagram`**: blank, which hides them. Add them if you want them shown.
 - [ ] **`location`** and **`timeZone`**: currently `Australia` and Sydney time (the live clock).
