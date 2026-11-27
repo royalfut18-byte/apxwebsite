@@ -13,6 +13,7 @@ import {
   validateEnquiry,
   type Enquiry,
   type EnquiryErrors,
+  tidyPhone,
 } from "@/lib/contact";
 import { site } from "@/lib/site";
 
@@ -254,7 +255,7 @@ export function ContactForm() {
                 </h3>
                 <p className="mt-4 max-w-md text-lg leading-relaxed text-bone-dim">
                   Your message is on its way to us. We&rsquo;ll read it properly and call you back on{" "}
-                  <span className="text-bone">{enquiry.phone}</span>.
+                  <span className="text-bone">{tidyPhone(enquiry.phone)}</span>.
                 </p>
               </>
             ) : status === "mailto" ? (

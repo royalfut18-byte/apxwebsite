@@ -137,6 +137,87 @@ export const sameClockAsHome = (iso: string, zone: string) =>
   zone === HOME_ZONE ||
   clock(iso, zone) + dayKey(iso, zone) === clock(iso, HOME_ZONE) + dayKey(iso, HOME_ZONE);
 
+/** "Perth (AWST)" */
+export const zoneLabel = (zone: string, at: string) => `${zoneCity(zone)} (${zoneName(at, zone)})`;
+
+/** The time zones in the picker: Australia's first, then a few common ones. */
+export const ZONES = [
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Australia/Brisbane",
+  "Australia/Adelaide",
+  "Australia/Darwin",
+  "Australia/Perth",
+  "Australia/Hobart",
+  "Pacific/Auckland",
+  "Asia/Singapore",
+  "Asia/Dubai",
+  "Europe/London",
+  "America/New_York",
+  "America/Los_Angeles",
+];
+
+/** The picker's zones, with the visitor's own added at the top when it isn't one of them. */
+export const zoneChoices = (own: string) => (ZONES.includes(own) ? ZONES : [own, ...ZONES]);
+
+/* ---------------------------------------------------------------------------
+   The month calendar. Days are plain dates ("2026-12-02") in the visitor's time
+   zone, so the sums below are done in UTC, where no clock changes get in the way.
+   --------------------------------------------------------------------------- */
+
+/** Weeks start on Monday, as Australian calendars do. */
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+const ymd = (day: string) => day.split("-").map(Number) as [number, number, number];
+
+/** "2026-12" from "2026-12-02". */
+export const monthOf = (day: string) => day.slice(0, 7);
+
+/** The month `n` months on from "2026-12" ("2027-01" for 1, "2026-11" for -1). */
+export function addMonths(month: string, n: number) {
+  const [y, m] = ymd(month);
+  const d = new Date(Date.UTC(y, m - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+const monthFormat = new Intl.DateTimeFormat("en-AU", { month: "long", timeZone: "UTC" });
+const dayFormat = new Intl.DateTimeFormat("en-AU", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+/** { name: "December", year: "2026" } for "2026-12". */
+export function monthName(month: string) {
+  const [y, m] = ymd(month);
+  return { name: monthFormat.format(Date.UTC(y, m - 1, 1)), year: String(y) };
+}
+
+/** "Wednesday 2 December" for "2026-12-02". */
+export function dayLabel(day: string) {
+  const [y, m, d] = ymd(day);
+  return dayFormat.format(Date.UTC(y, m - 1, d)).replace(",", "");
+}
+
+/**
+ * A month laid out in weeks, Monday first: each cell is a day ("2026-12-02"), or null for
+ * the blanks before the 1st and after the last day.
+ */
+export function monthGrid(month: string) {
+  const [y, m] = ymd(month);
+  const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+  const length = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells: (string | null)[] = Array.from({ length: lead }, () => null);
+  for (let d = 1; d <= length; d++) cells.push(`${month}-${String(d).padStart(2, "0")}`);
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
+
+/** When the call ends: "9:40 am" for a 9:30 start. */
+export const endClock = (start: string, zone: string) =>
+  clock(new Date(Date.parse(start) + CALL_MINUTES * 60_000).toISOString(), zone);
+
 /* ---------------------------------------------------------------------------
    Putting the call in the visitor's own calendar
    --------------------------------------------------------------------------- */

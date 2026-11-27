@@ -21,6 +21,24 @@ export type EnquiryErrors = Partial<Record<"name" | "phone" | "message", string>
 export const isPhone = (value: string) =>
   /^[0-9+()\-.\s]+$/.test(value) && value.replace(/\D/g, "").length >= 8;
 
+/**
+ * Tidies an Australian number the way APECS does: "0412345678" and "+61 412 345 678" become
+ * "0412 345 678", "(02) 9123 4567" becomes "02 9123 4567". Anything else is left as typed.
+ */
+export function tidyPhone(raw: string) {
+  const value = raw.trim();
+  const d = value.replace(/[^\d+]/g, "");
+  const local = d.startsWith("+61")
+    ? `0${d.slice(3)}`
+    : d.startsWith("61") && d.length === 11
+      ? `0${d.slice(2)}`
+      : d;
+  if (/^04\d{8}$/.test(local)) return `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`;
+  if (/^0[2378]\d{8}$/.test(local)) return `${local.slice(0, 2)} ${local.slice(2, 6)} ${local.slice(6)}`;
+  if (/^1[38]00\d{6}$/.test(local)) return `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`;
+  return value;
+}
+
 /** Trims and bounds whatever came in, so the same rules apply in the browser and on the server. */
 export function cleanEnquiry(input: unknown): Enquiry {
   const raw = (typeof input === "object" && input !== null ? input : {}) as Record<string, unknown>;

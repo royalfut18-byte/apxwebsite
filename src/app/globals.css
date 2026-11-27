@@ -549,6 +549,22 @@ html.is-locked body {
   .book-rise {
     animation: book-rise 0.9s var(--ease-expo) both;
   }
+  /* "Next" grows out of the chosen time. */
+  .book-next {
+    animation: book-next 0.55s var(--ease-expo) both;
+  }
+}
+
+@keyframes book-next {
+  from {
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+  }
+  to {
+    max-width: 50%;
+    opacity: 1;
+  }
 }
 
 @keyframes book-rise {
@@ -973,7 +989,7 @@ html[data-motion="reduced"] .process-sheet {
   animation: none;
 }
 /* The booking page still fades in, but nothing travels. */
-html[data-motion="reduced"] .book-rise {
+html[data-motion="reduced"] :is(.book-rise, .book-next) {
   animation-name: book-fade;
 }
 /* The wall stands still (it can still be turned by hand) and its screens simply fade in. */
